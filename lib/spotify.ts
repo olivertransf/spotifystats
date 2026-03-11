@@ -1,0 +1,129 @@
+const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID!;
+const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET!;
+const REFRESH_TOKEN = process.env.SPOTIFY_REFRESH_TOKEN!;
+
+const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
+
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+export async function getAccessToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt) {
+    return cachedToken.token;
+  }
+
+  const basic = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString("base64");
+
+  const res = await fetch(TOKEN_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${basic}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: REFRESH_TOKEN,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to refresh Spotify token: ${res.status}`);
+  }
+
+  const data = await res.json();
+  cachedToken = {
+    token: data.access_token,
+    expiresAt: Date.now() + (data.expires_in - 60) * 1000,
+  };
+
+  return cachedToken.token;
+}
+
+export interface RecentlyPlayedItem {
+  track: {
+    id: string;
+    name: string;
+    duration_ms: number;
+    album: {
+      name: string;
+      images: { url: string; width: number; height: number }[];
+    };
+    artists: { name: string }[];
+  };
+  played_at: string;
+}
+
+export async function getRecentlyPlayed(after?: string): Promise<{
+  items: RecentlyPlayedItem[];
+  cursors?: { after: string; before: string };
+}> {
+  const token = await getAccessToken();
+  const params = new URLSearchParams({ limit: "50" });
+  if (after) params.set("after", after);
+
+  const res = await fetch(
+    `https://api.spotify.com/v1/me/player/recently-played?${params}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Spotify API error: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export interface TopItem {
+  id: string;
+  name: string;
+  images?: { url: string }[];
+  album?: { images: { url: string }[] };
+  artists?: { name: string }[];
+  duration_ms?: number;
+}
+
+export async function getTopItems(
+  type: "artists" | "tracks",
+  timeRange: "short_term" | "medium_term" | "long_term" = "medium_term",
+  limit = 50
+): Promise<TopItem[]> {
+  const token = await getAccessToken();
+  const params = new URLSearchParams({
+    time_range: timeRange,
+    limit: String(limit),
+  });
+
+  const res = await fetch(
+    `https://api.spotify.com/v1/me/top/${type}?${params}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (!res.ok) {
+    throw new Error(`Spotify API error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.items;
+}
+
+export async function getCurrentlyPlaying(): Promise<{
+  is_playing: boolean;
+  item?: {
+    id: string;
+    name: string;
+    duration_ms: number;
+    progress_ms: number;
+    album: { name: string; images: { url: string }[] };
+    artists: { name: string }[];
+  };
+  progress_ms?: number;
+} | null> {
+  const token = await getAccessToken();
+
+  const res = await fetch(
+    "https://api.spotify.com/v1/me/player/currently-playing",
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+
+  if (res.status === 204 || !res.ok) return null;
+  return res.json();
+}

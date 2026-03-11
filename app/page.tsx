@@ -1,65 +1,156 @@
+import { Clock, Headphones, Music, Mic2 } from "lucide-react";
+import { StatCard } from "@/components/stat-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ListeningChart } from "@/components/listening-chart";
+import {
+  getTotalStats,
+  getTopTracks,
+  getTopArtists,
+  getStreamsByMonth,
+  getLastSyncedAt,
+} from "@/lib/stats";
+import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function OverviewPage() {
+  const [stats, topTracks, topArtists, monthlyData, lastSynced] = await Promise.all([
+    getTotalStats(),
+    getTopTracks(5),
+    getTopArtists(5),
+    getStreamsByMonth(12),
+    getLastSyncedAt(),
+  ]);
+
+  const chartData = monthlyData.map((d) => ({
+    label: d.month,
+    minutes: d.minutes,
+    streams: d.streams,
+  }));
+
+  const hasData = stats.totalStreams > 0;
+
+  if (!hasData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center gap-4">
+        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+          <Music className="h-8 w-8 text-primary" />
+        </div>
+        <h1 className="text-2xl font-bold">No data yet</h1>
+        <p className="text-muted-foreground max-w-sm">
+          Import your Spotify data export to see your full listening history and stats.
+        </p>
+        <a
+          href="/import"
+          className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 transition-colors"
+        >
+          Import Data
+        </a>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Overview</h1>
+          {lastSynced && (
+            <p className="text-muted-foreground text-sm mt-1">
+              Last synced {formatDistanceToNow(lastSynced, { addSuffix: true })}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard
+          label="Total Minutes"
+          value={stats.totalMinutes.toLocaleString()}
+          sub={`${stats.totalHours.toLocaleString()} hours`}
+          icon={Clock}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <StatCard
+          label="Total Streams"
+          value={stats.totalStreams.toLocaleString()}
+          icon={Headphones}
+        />
+        <StatCard
+          label="Top Track"
+          value={topTracks[0]?.trackName ?? "—"}
+          sub={topTracks[0]?.artistName}
+          icon={Music}
+        />
+        <StatCard
+          label="Top Artist"
+          value={topArtists[0]?.artistName ?? "—"}
+          sub={topArtists[0] ? `${topArtists[0].streams.toLocaleString()} streams` : undefined}
+          icon={Mic2}
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Listening Activity (last 12 months)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ListeningChart data={chartData} mode="months" />
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Top Tracks</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topTracks.map((track, i) => (
+              <div key={track.trackId} className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-4 shrink-0">{i + 1}</span>
+                {track.albumArt && (
+                  <Image
+                    src={track.albumArt}
+                    alt={track.albumName}
+                    width={36}
+                    height={36}
+                    className="rounded"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{track.trackName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {track.streams} plays
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Top Artists</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topArtists.map((artist, i) => (
+              <div key={artist.artistName} className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground w-4 shrink-0">{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{artist.artistName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {artist.minutesListened.toLocaleString()} min
+                  </p>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {artist.streams.toLocaleString()} plays
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

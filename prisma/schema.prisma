@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Stream {
+  id         String   @id @default(cuid())
+  trackId    String
+  trackName  String
+  artistName String
+  albumName  String
+  albumArt   String?
+  durationMs Int
+  playedAt   DateTime
+
+  @@unique([trackId, playedAt])
+  @@index([playedAt])
+  @@index([artistName])
+}
