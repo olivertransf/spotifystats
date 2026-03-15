@@ -1,25 +1,35 @@
+import { Suspense } from "react";
 import { Clock, Headphones, Music, Mic2 } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListeningChart } from "@/components/listening-chart";
+import { TimeRangeTabs } from "@/components/time-range-tabs";
 import {
   getTotalStats,
   getTopTracks,
   getTopArtists,
   getStreamsByMonth,
   getLastSyncedAt,
+  parseTimeRange,
 } from "@/lib/stats";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 
 export const dynamic = "force-dynamic";
 
-export default async function OverviewPage() {
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+}) {
+  const params = await searchParams;
+  const filter = parseTimeRange(params.range, params.from, params.to);
+
   const [stats, topTracks, topArtists, monthlyData, lastSynced] = await Promise.all([
-    getTotalStats(),
-    getTopTracks(5),
-    getTopArtists(5),
-    getStreamsByMonth(12),
+    getTotalStats(filter),
+    getTopTracks(5, filter),
+    getTopArtists(5, filter),
+    getStreamsByMonth(12, filter),
     getLastSyncedAt(),
   ]);
 
@@ -53,7 +63,7 @@ export default async function OverviewPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Overview</h1>
           {lastSynced && (
@@ -62,6 +72,9 @@ export default async function OverviewPage() {
             </p>
           )}
         </div>
+        <Suspense>
+          <TimeRangeTabs />
+        </Suspense>
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
@@ -92,7 +105,7 @@ export default async function OverviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Listening Activity (last 12 months)</CardTitle>
+          <CardTitle className="text-base">Listening Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <ListeningChart data={chartData} mode="months" />

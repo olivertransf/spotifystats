@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Music, Mic2, History, Clock, Upload } from "lucide-react";
+import { LayoutDashboard, Music, Mic2, History, Clock, Upload, Disc, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/top-tracks", label: "Top Tracks", icon: Music },
   { href: "/top-artists", label: "Top Artists", icon: Mic2 },
+  { href: "/top-albums", label: "Top Albums", icon: Disc },
+  { href: "/patterns", label: "Patterns", icon: Activity },
   { href: "/history", label: "History", icon: History },
   { href: "/recent", label: "Recent", icon: Clock },
   { href: "/import", label: "Import Data", icon: Upload },

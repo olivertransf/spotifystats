@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getTopTracks, getTimeRangeDate } from "@/lib/stats";
+import { getTopTracks, parseTimeRange } from "@/lib/stats";
 import { TimeRangeTabs } from "@/components/time-range-tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import Image from "next/image";
@@ -7,16 +7,14 @@ import { Clock, Headphones } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-type Range = "4w" | "6m" | "1y" | "all";
-
 export default async function TopTracksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
-  const { range = "all" } = await searchParams;
-  const since = getTimeRangeDate(range as Range);
-  const tracks = await getTopTracks(50, since);
+  const params = await searchParams;
+  const filter = parseTimeRange(params.range, params.from, params.to);
+  const tracks = await getTopTracks(50, filter);
 
   return (
     <div className="space-y-6">

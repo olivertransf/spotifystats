@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListeningChart } from "@/components/listening-chart";
+import { TimeRangeTabs } from "@/components/time-range-tabs";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Mode = "weeks" | "months";
@@ -13,20 +16,29 @@ interface ChartPoint {
   streams: number;
 }
 
-export default function HistoryPage() {
+function HistoryContent() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>("months");
   const [data, setData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const range = searchParams.get("range") ?? "";
+  const from = searchParams.get("from") ?? "";
+  const to = searchParams.get("to") ?? "";
+
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/stats/history?mode=${mode}`)
+    const params = new URLSearchParams({ mode });
+    if (range) params.set("range", range);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    fetch(`/api/stats/history?${params}`)
       .then((r) => r.json())
       .then((d) => {
         setData(d.data ?? []);
         setLoading(false);
       });
-  }, [mode]);
+  }, [mode, range, from, to]);
 
   return (
     <div className="space-y-6">
@@ -37,12 +49,15 @@ export default function HistoryPage() {
             Minutes listened over time
           </p>
         </div>
-        <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
-          <TabsList className="bg-secondary">
-            <TabsTrigger value="weeks" className="text-xs">By Week</TabsTrigger>
-            <TabsTrigger value="months" className="text-xs">By Month</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-4">
+          <TimeRangeTabs />
+          <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)}>
+            <TabsList className="bg-secondary">
+              <TabsTrigger value="weeks" className="text-xs">By Week</TabsTrigger>
+              <TabsTrigger value="months" className="text-xs">By Month</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </div>
 
       <Card>
@@ -66,5 +81,13 @@ export default function HistoryPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={<div className="h-64 flex items-center justify-center">Loading...</div>}>
+      <HistoryContent />
+    </Suspense>
   );
 }
