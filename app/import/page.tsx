@@ -23,19 +23,22 @@ export default function ImportPage() {
   const [progress, setProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [backfillStatus, setBackfillStatus] = useState<"idle" | "running" | "done" | "error">("idle");
-  const [backfillResult, setBackfillResult] = useState<{ updated: number; total: number } | null>(null);
+  const [backfillResult, setBackfillResult] = useState<{ updated: number; total: number; remaining?: number } | null>(null);
+  const [backfillError, setBackfillError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function runBackfill() {
     setBackfillStatus("running");
+    setBackfillError(null);
     try {
       const res = await fetch("/api/backfill-art", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Backfill failed");
       setBackfillResult({ updated: data.updated, total: data.total ?? 0 });
       setBackfillStatus("done");
-    } catch {
+    } catch (e) {
       setBackfillStatus("error");
+      setBackfillError(e instanceof Error ? e.message : "Backfill failed");
     }
   }
 
@@ -209,10 +212,13 @@ export default function ImportPage() {
             <p className="text-sm text-muted-foreground mt-3">
               Updated {backfillResult.updated.toLocaleString()} streams with album art
               {backfillResult.total > 0 && ` (${backfillResult.total} tracks checked)`}
+              {backfillResult.remaining !== undefined && backfillResult.remaining > 0 && (
+                <> — {backfillResult.remaining.toLocaleString()} left. Click again to continue.</>
+              )}
             </p>
           )}
           {backfillStatus === "error" && (
-            <p className="text-sm text-destructive mt-3">Backfill failed. Check that your Spotify token is valid.</p>
+            <p className="text-sm text-destructive mt-3">{backfillError ?? "Backfill failed."}</p>
           )}
         </CardContent>
       </Card>
