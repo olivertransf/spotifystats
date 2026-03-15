@@ -7,6 +7,10 @@ const TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token";
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 export async function getAccessToken(): Promise<string> {
+  if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN) {
+    throw new Error("Missing SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, or SPOTIFY_REFRESH_TOKEN in environment");
+  }
+
   if (cachedToken && Date.now() < cachedToken.expiresAt) {
     return cachedToken.token;
   }
@@ -25,11 +29,12 @@ export async function getAccessToken(): Promise<string> {
     }),
   });
 
-  if (!res.ok) {
-    throw new Error(`Failed to refresh Spotify token: ${res.status}`);
-  }
-
   const data = await res.json();
+
+  if (!res.ok) {
+    const msg = data?.error_description ?? data?.error ?? `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
   cachedToken = {
     token: data.access_token,
     expiresAt: Date.now() + (data.expires_in - 60) * 1000,

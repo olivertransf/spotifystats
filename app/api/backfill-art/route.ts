@@ -46,11 +46,7 @@ export async function POST() {
   return NextResponse.json({ updated, total: idsToProcess.length, remaining });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Backfill failed";
-    const isAuth = message.toLowerCase().includes("token") || message.toLowerCase().includes("401") || message.toLowerCase().includes("403");
     console.error("Backfill error:", err);
-    return NextResponse.json(
-      { error: isAuth ? "Spotify token invalid or expired. Run `npm run get-token` to get a new one." : message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

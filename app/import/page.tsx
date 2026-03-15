@@ -25,7 +25,27 @@ export default function ImportPage() {
   const [backfillStatus, setBackfillStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [backfillResult, setBackfillResult] = useState<{ updated: number; total: number; remaining?: number } | null>(null);
   const [backfillError, setBackfillError] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<"idle" | "running" | "ok" | "fail">("idle");
+  const [testError, setTestError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  async function testSpotify() {
+    setTestStatus("running");
+    setTestError(null);
+    try {
+      const res = await fetch("/api/spotify-test");
+      const data = await res.json();
+      if (!res.ok) {
+        setTestError(data.error ?? "Connection failed");
+        setTestStatus("fail");
+      } else {
+        setTestStatus("ok");
+      }
+    } catch {
+      setTestError("Network error");
+      setTestStatus("fail");
+    }
+  }
 
   async function runBackfill() {
     setBackfillStatus("running");
@@ -200,7 +220,18 @@ export default function ImportPage() {
             Imported streams don&apos;t include images. This fetches artwork from Spotify for tracks that are missing it.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={testSpotify}
+              disabled={testStatus === "running"}
+              className="text-xs px-3 py-1.5 rounded bg-secondary hover:bg-secondary/80 disabled:opacity-50"
+            >
+              {testStatus === "running" ? "Testing…" : testStatus === "ok" ? "Connection OK" : "Test Spotify connection"}
+            </button>
+            {testStatus === "ok" && <span className="text-xs text-primary">Spotify credentials work</span>}
+            {testStatus === "fail" && testError && <span className="text-xs text-destructive">{testError}</span>}
+          </div>
           <button
             onClick={runBackfill}
             disabled={backfillStatus === "running"}
