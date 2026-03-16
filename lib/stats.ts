@@ -110,8 +110,17 @@ export async function getTopArtists(limit = 20, filter?: TimeRangeFilter) {
     take: limit,
   });
 
+  const names = artists.map((a) => a.artistName);
+  const artRows = await db.stream.findMany({
+    where: { artistName: { in: names }, artistArt: { not: null } },
+    select: { artistName: true, artistArt: true },
+    distinct: ["artistName"],
+  });
+  const artMap = new Map(artRows.map((r) => [r.artistName, r.artistArt]));
+
   return artists.map((a) => ({
     artistName: a.artistName,
+    artistArt: artMap.get(a.artistName) ?? null,
     streams: a._count.id,
     minutesListened: Math.round((a._sum.durationMs ?? 0) / 60000),
   }));

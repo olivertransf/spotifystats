@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getTopArtists, parseTimeRange } from "@/lib/stats";
 import { TimeRangeTabs } from "@/components/time-range-tabs";
 import { Card, CardContent } from "@/components/ui/card";
+import { ArtistArt } from "@/components/artist-art";
 import { Clock, Headphones } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -43,11 +44,13 @@ export default async function TopArtistsPage({
                   <span className="text-sm text-muted-foreground w-7 text-right shrink-0">
                     {i + 1}
                   </span>
-                  <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <span className="text-primary text-sm font-bold">
-                      {artist.artistName[0]?.toUpperCase()}
-                    </span>
-                  </div>
+                  <ArtistArt
+                    src={artist.artistArt}
+                    alt={artist.artistName}
+                    width={44}
+                    height={44}
+                    className="shrink-0"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{artist.artistName}</p>
                   </div>

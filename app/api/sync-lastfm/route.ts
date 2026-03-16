@@ -34,6 +34,7 @@ export async function POST() {
         trackId: `lfm-${t.playedAt.getTime()}`,
         trackName: t.name,
         artistName: t.artist,
+        artistArt: null,
         albumName: t.album,
         albumArt: t.image,
         durationMs: 180000,

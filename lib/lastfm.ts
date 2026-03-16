@@ -58,3 +58,39 @@ export async function getRecentTracks(
       };
     });
 }
+
+export async function getTrackArt(artist: string, track: string): Promise<string | null> {
+  if (!API_KEY) return null;
+  const params = new URLSearchParams({
+    method: "track.getInfo",
+    artist,
+    track,
+    api_key: API_KEY,
+    format: "json",
+  });
+  const res = await fetch(`${BASE}?${params}`);
+  const data = await res.json();
+  if (data.error) return null;
+  const album = data.track?.album;
+  const imgs = Array.isArray(album?.image) ? album.image : [];
+  const img = imgs.find((i: { size?: string }) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
+  const url = img?.["#text"];
+  return url && url.length > 0 ? url : null;
+}
+
+export async function getArtistArt(artist: string): Promise<string | null> {
+  if (!API_KEY) return null;
+  const params = new URLSearchParams({
+    method: "artist.getInfo",
+    artist,
+    api_key: API_KEY,
+    format: "json",
+  });
+  const res = await fetch(`${BASE}?${params}`);
+  const data = await res.json();
+  if (data.error) return null;
+  const imgs = Array.isArray(data.artist?.image) ? data.artist.image : [];
+  const img = imgs.find((i: { size?: string }) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
+  const url = img?.["#text"];
+  return url && url.length > 0 ? url : null;
+}

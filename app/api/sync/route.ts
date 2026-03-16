@@ -43,6 +43,7 @@ async function runSync() {
         trackId: item.track.id,
         trackName: item.track.name,
         artistName: item.track.artists[0]?.name ?? "Unknown",
+        artistArt: null,
         albumName: item.track.album.name,
         albumArt: item.track.album.images[0]?.url ?? null,
         durationMs: item.track.duration_ms,

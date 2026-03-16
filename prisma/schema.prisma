@@ -12,6 +12,7 @@ model Stream {
   trackId    String
   trackName  String
   artistName String
+  artistArt  String?
   albumName  String
   albumArt   String?
   durationMs Int

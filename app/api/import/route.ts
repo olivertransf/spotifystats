@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
           trackId: e.spotify_track_uri!.replace("spotify:track:", ""),
           trackName: e.master_metadata_track_name!,
           artistName: e.master_metadata_album_artist_name!,
+          artistArt: null,
           albumName: e.master_metadata_album_album_name ?? "",
           albumArt: null,
           durationMs: e.ms_played,

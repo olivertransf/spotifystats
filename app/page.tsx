@@ -14,6 +14,7 @@ import {
 } from "@/lib/stats";
 import { formatDistanceToNow } from "date-fns";
 import { AlbumArt } from "@/components/album-art";
+import { ArtistArt } from "@/components/artist-art";
 
 export const dynamic = "force-dynamic";
 
@@ -148,6 +149,7 @@ export default async function OverviewPage({
             {topArtists.map((artist, i) => (
               <div key={artist.artistName} className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground w-4 shrink-0">{i + 1}</span>
+                <ArtistArt src={artist.artistArt} alt={artist.artistName} width={32} height={32} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{artist.artistName}</p>
                   <p className="text-xs text-muted-foreground">

@@ -25,6 +25,9 @@ export default function ImportPage() {
   const [backfillStatus, setBackfillStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [backfillResult, setBackfillResult] = useState<{ updated: number; total: number; remaining?: number } | null>(null);
   const [backfillError, setBackfillError] = useState<string | null>(null);
+  const [backfillArtistsStatus, setBackfillArtistsStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [backfillArtistsResult, setBackfillArtistsResult] = useState<{ updated: number; total: number; remaining?: number } | null>(null);
+  const [backfillArtistsError, setBackfillArtistsError] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<"idle" | "running" | "ok" | "fail">("idle");
   const [testError, setTestError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -97,11 +100,26 @@ export default function ImportPage() {
       const res = await fetch("/api/backfill-art", { method: "POST" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Backfill failed");
-      setBackfillResult({ updated: data.updated, total: data.total ?? 0 });
+      setBackfillResult({ updated: data.updated, total: data.total ?? 0, remaining: data.remaining });
       setBackfillStatus("done");
     } catch (e) {
       setBackfillStatus("error");
       setBackfillError(e instanceof Error ? e.message : "Backfill failed");
+    }
+  }
+
+  async function runBackfillArtists() {
+    setBackfillArtistsStatus("running");
+    setBackfillArtistsError(null);
+    try {
+      const res = await fetch("/api/backfill-artists", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Backfill failed");
+      setBackfillArtistsResult({ updated: data.updated, total: data.total ?? 0, remaining: data.remaining });
+      setBackfillArtistsStatus("done");
+    } catch (e) {
+      setBackfillArtistsStatus("error");
+      setBackfillArtistsError(e instanceof Error ? e.message : "Backfill failed");
     }
   }
 
@@ -293,6 +311,39 @@ export default function ImportPage() {
           )}
           {backfillStatus === "error" && (
             <p className="text-sm text-destructive mt-3">{backfillError ?? "Backfill failed."}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Music2 className="h-4 w-4" />
+            Backfill artist images
+          </CardTitle>
+          <CardDescription>
+            Fetches artist photos from Last.fm for streams missing them. Requires LASTFM_API_KEY.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <button
+            onClick={runBackfillArtists}
+            disabled={backfillArtistsStatus === "running"}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm transition-colors disabled:opacity-50"
+          >
+            {backfillArtistsStatus === "running" ? "Fetching images..." : "Backfill artist images"}
+          </button>
+          {backfillArtistsStatus === "done" && backfillArtistsResult && (
+            <p className="text-sm text-muted-foreground mt-3">
+              Updated {backfillArtistsResult.updated.toLocaleString()} streams with artist images
+              {backfillArtistsResult.total > 0 && ` (${backfillArtistsResult.total} artists checked)`}
+              {backfillArtistsResult.remaining !== undefined && backfillArtistsResult.remaining > 0 && (
+                <> — {backfillArtistsResult.remaining.toLocaleString()} left. Click again to continue.</>
+              )}
+            </p>
+          )}
+          {backfillArtistsStatus === "error" && (
+            <p className="text-sm text-destructive mt-3">{backfillArtistsError ?? "Backfill failed."}</p>
           )}
         </CardContent>
       </Card>

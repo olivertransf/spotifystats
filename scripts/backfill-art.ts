@@ -1,18 +1,23 @@
-import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { getTracks } from "@/lib/spotify";
-import { getTrackArt } from "@/lib/lastfm";
+/**
+ * Backfill album art for streams missing artwork.
+ * Tries Spotify first; on 403, falls back to Last.fm.
+ * Uses local .env (DATABASE_URL, SPOTIFY_*, LASTFM_API_KEY).
+ *
+ * Usage: npx tsx scripts/backfill-art.ts
+ */
 
-export const maxDuration = 60;
+import "dotenv/config";
+import { db } from "../lib/db";
+import { getTracks } from "../lib/spotify";
+import { getTrackArt } from "../lib/lastfm";
 
-const SPOTIFY_ID_REGEX = /^[a-zA-Z0-9]{22}$/;
 const MAX_PER_RUN = 500;
 const BATCH_SIZE = 50;
 const DELAY_MS = 150;
 const LASTFM_DELAY_MS = 300;
+const SPOTIFY_ID_REGEX = /^[a-zA-Z0-9]{22}$/;
 
-export async function POST() {
-  try {
+async function main() {
   const missing = await db.stream.groupBy({
     by: ["trackId", "trackName", "artistName"],
     where: { albumArt: null },
@@ -21,14 +26,18 @@ export async function POST() {
   const spotifyTracks = missing.filter(
     (m) => !m.trackId.startsWith("lfm-") && SPOTIFY_ID_REGEX.test(m.trackId)
   );
+
   if (spotifyTracks.length === 0) {
-    return NextResponse.json({ updated: 0, total: 0, remaining: 0, message: "No Spotify tracks missing artwork (Last.fm tracks are skipped)" });
+    console.log("No Spotify tracks missing artwork (Last.fm tracks are skipped)");
+    process.exit(0);
   }
 
   const toProcess = spotifyTracks.slice(0, MAX_PER_RUN);
   const remaining = spotifyTracks.length - toProcess.length;
   let updated = 0;
-  let source = "spotify";
+  let usedLastFm = false;
+
+  console.log(`Processing ${toProcess.length} tracks (${remaining} remaining)...`);
 
   try {
     const ids = toProcess.map((t) => t.trackId);
@@ -50,8 +59,12 @@ export async function POST() {
     }
   } catch (err) {
     const is403 = err instanceof Error && err.message.includes("403");
-    if (!is403 || !process.env.LASTFM_API_KEY) throw err;
-    source = "lastfm";
+    if (!is403) throw err;
+    if (!process.env.LASTFM_API_KEY) {
+      throw new Error("Spotify returned 403. Add LASTFM_API_KEY to .env to use Last.fm fallback.");
+    }
+    usedLastFm = true;
+    console.log("Spotify returned 403, falling back to Last.fm...");
     for (const m of toProcess) {
       const art = await getTrackArt(m.artistName, m.trackName);
       if (art) {
@@ -65,10 +78,10 @@ export async function POST() {
     }
   }
 
-  return NextResponse.json({ updated, total: toProcess.length, remaining, source });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Backfill failed";
-    console.error("Backfill error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+  console.log(`Updated ${updated} streams via ${usedLastFm ? "Last.fm" : "Spotify"}. ${remaining} remaining.`);
 }
+
+main().catch((err) => {
+  console.error("Backfill error:", err);
+  process.exit(1);
+});
