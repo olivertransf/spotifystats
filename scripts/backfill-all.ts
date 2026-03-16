@@ -1,0 +1,66 @@
+/**
+ * Runs backfill-art and backfill-artists until all images are done.
+ * Usage: npx tsx scripts/backfill-all.ts
+ */
+
+import { spawnSync } from "child_process";
+import path from "path";
+
+const scriptsDir = path.join(__dirname);
+const tsx = "npx";
+const tsxArgs = ["tsx"];
+
+function run(script: string): { output: string; ok: boolean } {
+  const result = spawnSync(tsx, [...tsxArgs, path.join(scriptsDir, script)], {
+    encoding: "utf-8",
+    stdio: "pipe",
+    cwd: path.join(__dirname, ".."),
+  });
+  const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
+  return { output, ok: result.status === 0 };
+}
+
+function runUntilDone(
+  script: string,
+  donePattern: RegExp,
+  label: string
+): void {
+  let round = 0;
+  while (true) {
+    round++;
+    console.log(`\n--- ${label} round ${round} ---`);
+    const { output, ok } = run(script);
+    console.log(output);
+    if (donePattern.test(output)) {
+      console.log(`\n${label} complete.`);
+      break;
+    }
+    if (!ok) {
+      console.error(`\n${label} failed. Stopping.`);
+      process.exit(1);
+    }
+  }
+}
+
+async function main() {
+  console.log("Starting full backfill (album art + artist images)...\n");
+
+  runUntilDone(
+    "backfill-art.ts",
+    /No Spotify tracks missing artwork/,
+    "Album art"
+  );
+
+  runUntilDone(
+    "backfill-artists.ts",
+    /No artists missing artwork/,
+    "Artist images"
+  );
+
+  console.log("\nAll backfills complete.");
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

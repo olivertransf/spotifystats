@@ -75,7 +75,14 @@ export async function getTrackArt(artist: string, track: string): Promise<string
   const imgs = Array.isArray(album?.image) ? album.image : [];
   const img = imgs.find((i: { size?: string }) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
   const url = img?.["#text"];
-  return url && url.length > 0 ? url : null;
+  if (!url || url.length === 0 || isPlaceholderUrl(url)) return null;
+  return url;
+}
+
+const PLACEHOLDER_HASH = "2a96cbd8b46e442fc41c2b86b821562f";
+
+function isPlaceholderUrl(url: string): boolean {
+  return url.includes(PLACEHOLDER_HASH);
 }
 
 export async function getArtistArt(artist: string): Promise<string | null> {
@@ -92,5 +99,6 @@ export async function getArtistArt(artist: string): Promise<string | null> {
   const imgs = Array.isArray(data.artist?.image) ? data.artist.image : [];
   const img = imgs.find((i: { size?: string }) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
   const url = img?.["#text"];
-  return url && url.length > 0 ? url : null;
+  if (!url || url.length === 0 || isPlaceholderUrl(url)) return null;
+  return url;
 }

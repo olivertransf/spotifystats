@@ -11,10 +11,13 @@ interface AlbumArtProps {
   className?: string;
 }
 
+const PLACEHOLDER_HASH = "2a96cbd8b46e442fc41c2b86b821562f";
+
 export function AlbumArt({ src, alt, width = 40, height = 40, className }: AlbumArtProps) {
   const [error, setError] = useState(false);
+  const isPlaceholder = src?.includes(PLACEHOLDER_HASH);
 
-  if (!src || error) {
+  if (!src || error || isPlaceholder) {
     return (
       <div
         className={`bg-secondary shrink-0 flex items-center justify-center ${className ?? ""}`}
