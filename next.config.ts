@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "userserve-ak.last.fm" },
       { protocol: "http", hostname: "userserve-ak.last.fm" },
       { protocol: "https", hostname: "lastfm.freetls.fastly.net" },
+      { protocol: "https", hostname: "i.discogs.com" },
     ],
   },
 };

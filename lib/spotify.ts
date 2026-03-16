@@ -126,6 +126,20 @@ export async function getTopItems(
   return data.items;
 }
 
+export async function searchArtist(artistName: string): Promise<string | null> {
+  if (!artistName?.trim()) return null;
+  const token = await getAccessToken();
+  const q = encodeURIComponent(artistName.trim());
+  const res = await fetch(
+    `https://api.spotify.com/v1/search?q=${q}&type=artist&limit=1`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  const artist = data.artists?.items?.[0];
+  return artist?.images?.[0]?.url ?? null;
+}
+
 export async function getTracks(trackIds: string[]) {
   if (trackIds.length === 0) return [];
   const token = await getAccessToken();

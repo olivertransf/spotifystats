@@ -1,5 +1,5 @@
 /**
- * Runs backfill-art and backfill-artists until all images are done.
+ * Runs backfill-art until all album art is done.
  * Usage: npx tsx scripts/backfill-all.ts
  */
 
@@ -43,7 +43,7 @@ function runUntilDone(
 }
 
 async function main() {
-  console.log("Starting full backfill (album art + artist images)...\n");
+  console.log("Starting album art backfill...\n");
 
   runUntilDone(
     "backfill-art.ts",
@@ -51,13 +51,7 @@ async function main() {
     "Album art"
   );
 
-  runUntilDone(
-    "backfill-artists.ts",
-    /No artists missing artwork/,
-    "Artist images"
-  );
-
-  console.log("\nAll backfills complete.");
+  console.log("\nBackfill complete.");
 }
 
 main().catch((err) => {

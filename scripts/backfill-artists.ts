@@ -1,32 +1,38 @@
 /**
  * Backfill artist images for streams missing artwork.
- * Uses Last.fm artist.getInfo. Requires LASTFM_API_KEY in .env.
+ * Tries Spotify Search API first, then Last.fm. Requires SPOTIFY_* and LASTFM_API_KEY.
  *
  * Usage: npx tsx scripts/backfill-artists.ts
  */
 
 import "dotenv/config";
 import { db } from "../lib/db";
+import { searchArtist } from "../lib/spotify";
+import { getArtistArtFromDiscogs } from "../lib/discogs";
 import { getArtistArt } from "../lib/lastfm";
 
 const MAX_PER_RUN = 100;
-const DELAY_MS = 300;
+const DELAY_MS = 200;
 
-async function main() {
-  if (!process.env.LASTFM_API_KEY) {
-    console.error("Set LASTFM_API_KEY in .env");
-    process.exit(1);
+async function getArtistImage(artistName: string): Promise<string | null> {
+  try {
+    const spotify = await searchArtist(artistName);
+    if (spotify) return spotify;
+  } catch {
+    // Spotify 403 or other error
   }
+  const discogs = await getArtistArtFromDiscogs(artistName);
+  if (discogs) return discogs;
+  return getArtistArt(artistName);
+}
 
+async function run() {
   const missing = await db.stream.groupBy({
     by: ["artistName"],
     where: { artistArt: null },
   });
 
-  if (missing.length === 0) {
-    console.log("No artists missing artwork");
-    process.exit(0);
-  }
+  if (missing.length === 0) return true;
 
   const toProcess = missing.slice(0, MAX_PER_RUN);
   const remaining = missing.length - toProcess.length;
@@ -35,7 +41,7 @@ async function main() {
   console.log(`Processing ${toProcess.length} artists (${remaining} remaining)...`);
 
   for (const m of toProcess) {
-    const art = await getArtistArt(m.artistName);
+    const art = await getArtistImage(m.artistName);
     if (art) {
       const result = await db.stream.updateMany({
         where: { artistName: m.artistName, artistArt: null },
@@ -46,7 +52,21 @@ async function main() {
     await new Promise((r) => setTimeout(r, DELAY_MS));
   }
 
-  console.log(`Updated ${updated} streams across ${toProcess.length} artists. ${remaining} remaining.`);
+  console.log(`Updated ${updated} streams. ${remaining} remaining.\n`);
+  return false;
+}
+
+async function main() {
+  let round = 0;
+  while (true) {
+    round++;
+    console.log(`--- Round ${round} ---`);
+    const done = await run();
+    if (done) {
+      console.log("No artists missing artwork. Done.");
+      break;
+    }
+  }
 }
 
 main().catch((err) => {

@@ -17,13 +17,18 @@ export function ArtistArt({ src, alt, width = 44, height = 44, className }: Arti
   const isPlaceholder = src?.includes(PLACEHOLDER_HASH);
 
   if (!src || error || isPlaceholder) {
+    const letter = (alt?.trim()[0] ?? "?").toUpperCase();
+    const size = Math.min(width, height);
+    const fontSize = Math.max(12, Math.floor(size * 0.45));
     return (
       <div
-        className={`rounded-full bg-primary/10 shrink-0 flex items-center justify-center ${className ?? ""}`}
-        style={{ width, height }}
+        role="img"
+        aria-label={alt || "Artist"}
+        className={`rounded-full bg-secondary flex items-center justify-center shrink-0 ${className ?? ""}`}
+        style={{ width, height, minWidth: size, minHeight: size }}
       >
-        <span className="text-primary text-sm font-bold">
-          {alt[0]?.toUpperCase() ?? "?"}
+        <span className="text-muted-foreground font-semibold" style={{ fontSize }}>
+          {letter}
         </span>
       </div>
     );

@@ -111,12 +111,20 @@ export async function getTopArtists(limit = 20, filter?: TimeRangeFilter) {
   });
 
   const names = artists.map((a) => a.artistName);
-  const artRows = await db.stream.findMany({
-    where: { artistName: { in: names }, artistArt: { not: null } },
-    select: { artistName: true, artistArt: true },
-    distinct: ["artistName"],
-  });
-  const artMap = new Map(artRows.map((r) => [r.artistName, r.artistArt]));
+  const PLACEHOLDER = "2a96cbd8b46e442fc41c2b86b821562f";
+  let artMap = new Map<string, string | null>();
+  if (names.length > 0) {
+    const artRows = await db.stream.findMany({
+      where: { artistName: { in: names }, artistArt: { not: null } },
+      select: { artistName: true, artistArt: true },
+      distinct: ["artistName"],
+    });
+    artMap = new Map(
+      artRows
+        .filter((r) => r.artistArt && !r.artistArt.includes(PLACEHOLDER))
+        .map((r) => [r.artistName, r.artistArt!])
+    );
+  }
 
   return artists.map((a) => ({
     artistName: a.artistName,

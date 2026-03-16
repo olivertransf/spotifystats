@@ -1,21 +1,28 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { searchArtist } from "@/lib/spotify";
+import { getArtistArtFromDiscogs } from "@/lib/discogs";
 import { getArtistArt } from "@/lib/lastfm";
 
 export const maxDuration = 60;
 
 const MAX_PER_RUN = 100;
-const DELAY_MS = 300;
+const DELAY_MS = 200;
+
+async function getArtistImage(artistName: string): Promise<string | null> {
+  try {
+    const spotify = await searchArtist(artistName);
+    if (spotify) return spotify;
+  } catch {
+    // Spotify 403 or other error
+  }
+  const discogs = await getArtistArtFromDiscogs(artistName);
+  if (discogs) return discogs;
+  return getArtistArt(artistName);
+}
 
 export async function POST() {
   try {
-    if (!process.env.LASTFM_API_KEY) {
-      return NextResponse.json(
-        { error: "LASTFM_API_KEY not configured" },
-        { status: 500 }
-      );
-    }
-
     const missing = await db.stream.groupBy({
       by: ["artistName"],
       where: { artistArt: null },
@@ -35,7 +42,7 @@ export async function POST() {
     let updated = 0;
 
     for (const m of toProcess) {
-      const art = await getArtistArt(m.artistName);
+      const art = await getArtistImage(m.artistName);
       if (art) {
         const result = await db.stream.updateMany({
           where: { artistName: m.artistName, artistArt: null },
