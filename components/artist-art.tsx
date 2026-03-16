@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 
 interface ArtistArtProps {
   src: string | null | undefined;
@@ -28,13 +27,13 @@ export function ArtistArt({ src, alt, width = 44, height = 44, className }: Arti
   }
 
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={src}
       alt={alt}
       width={width}
       height={height}
-      className={`rounded-full object-cover ${className ?? ""}`}
-      unoptimized
+      className={`rounded-full object-cover shrink-0 ${className ?? ""}`}
       referrerPolicy="no-referrer"
       onError={() => setError(true)}
     />
