@@ -61,13 +61,24 @@ npm run db:push
 npm run dev
 ```
 
+## Last.fm sync (optional, no Premium needed)
+
+If Spotify sync fails due to Premium requirement, use Last.fm instead:
+
+1. Create account at [last.fm](https://www.last.fm)
+2. In Spotify: Settings → Social → Connect to Last.fm
+3. Get API key at [last.fm/api/account/create](https://www.last.fm/api/account/create)
+4. Add to Netlify: `LASTFM_API_KEY`, `LASTFM_USER` (your username)
+5. Click "Sync from Last.fm" on the Import page, or it runs hourly with the cron
+
 ## Deployment (Netlify)
 
 1. Push to GitHub
 2. Connect repo in Netlify
 3. Add all `.env` values as **Environment variables** in Netlify settings
-4. Also add `CRON_SECRET` — any random string (used to secure the sync endpoint)
-5. Deploy — the scheduled function will sync new plays every hour automatically
+4. Add `CRON_SECRET` — any random string (secures the sync endpoint)
+5. Optionally add `LASTFM_API_KEY` and `LASTFM_USER` for Last.fm sync (works without Premium)
+6. Deploy — the scheduled function runs hourly (Spotify + Last.fm if configured)
 
 ## Scripts
 

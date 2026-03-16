@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle, AlertCircle, ExternalLink, ImageIcon, RefreshCw } from "lucide-react";
+import { Upload, CheckCircle, AlertCircle, ExternalLink, ImageIcon, RefreshCw, Music2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "uploading" | "success" | "error";
@@ -30,6 +30,7 @@ export default function ImportPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [syncResult, setSyncResult] = useState<{ synced: number; message?: string; error?: string; hint?: string } | null>(null);
+  const [lastfmResult, setLastfmResult] = useState<{ synced: number; message?: string; error?: string } | null>(null);
 
   async function runSync() {
     setSyncResult(null);
@@ -50,6 +51,24 @@ export default function ImportPage() {
       }
     } catch {
       setSyncResult({ synced: 0, error: "Network error" });
+    }
+  }
+
+  async function runLastfmSync() {
+    setLastfmResult(null);
+    try {
+      const res = await fetch("/api/sync-lastfm", { method: "GET" });
+      const data = await res.json();
+      if (!res.ok) {
+        setLastfmResult({ synced: 0, error: data.detail ?? data.error ?? "Sync failed" });
+      } else {
+        setLastfmResult({
+          synced: data.synced ?? 0,
+          message: data.synced > 0 ? `Added ${data.synced} scrobbles` : data.message ?? "No new scrobbles",
+        });
+      }
+    } catch {
+      setLastfmResult({ synced: 0, error: "Network error" });
     }
   }
 
@@ -305,6 +324,38 @@ export default function ImportPage() {
                 <p className="text-xs text-muted-foreground">{syncResult.hint}</p>
               )}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Music2 className="h-4 w-4" />
+            Sync from Last.fm
+          </CardTitle>
+          <CardDescription>
+            Works without Spotify Premium. Connect Spotify to Last.fm, then sync your scrobbles here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>1. Create a free account at last.fm</p>
+            <p>2. In Spotify: Settings → Social → Connect to Last.fm</p>
+            <p>3. Get an API key at last.fm/api/account/create</p>
+            <p>4. Add to Netlify env: LASTFM_API_KEY, LASTFM_USER (your Last.fm username)</p>
+          </div>
+          <button
+            onClick={runLastfmSync}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Sync from Last.fm
+          </button>
+          {lastfmResult && (
+            <p className={`text-sm ${lastfmResult.error ? "text-destructive" : "text-muted-foreground"}`}>
+              {lastfmResult.error ?? lastfmResult.message}
+            </p>
           )}
         </CardContent>
       </Card>
