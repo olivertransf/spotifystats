@@ -13,7 +13,7 @@ import {
   parseTimeRange,
 } from "@/lib/stats";
 import { formatDistanceToNow } from "date-fns";
-import Image from "next/image";
+import { AlbumArt } from "@/components/album-art";
 
 export const dynamic = "force-dynamic";
 
@@ -121,15 +121,13 @@ export default async function OverviewPage({
             {topTracks.map((track, i) => (
               <div key={track.trackId} className="flex items-center gap-3">
                 <span className="text-sm text-muted-foreground w-4 shrink-0">{i + 1}</span>
-                {track.albumArt && (
-                  <Image
-                    src={track.albumArt}
-                    alt={track.albumName}
-                    width={36}
-                    height={36}
-                    className="rounded"
-                  />
-                )}
+                <AlbumArt
+                  src={track.albumArt}
+                  alt={track.albumName}
+                  width={36}
+                  height={36}
+                  className="rounded"
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{track.trackName}</p>
                   <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>

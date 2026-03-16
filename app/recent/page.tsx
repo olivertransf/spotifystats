@@ -1,7 +1,7 @@
 import { getRecentStreams } from "@/lib/stats";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import Image from "next/image";
+import { AlbumArt } from "@/components/album-art";
 
 export const dynamic = "force-dynamic";
 
@@ -30,17 +30,13 @@ export default async function RecentPage() {
                   key={stream.id}
                   className="flex items-center gap-4 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"
                 >
-                  {stream.albumArt ? (
-                    <Image
-                      src={stream.albumArt}
-                      alt={stream.albumName}
-                      width={40}
-                      height={40}
-                      className="rounded shrink-0"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-secondary shrink-0" />
-                  )}
+                  <AlbumArt
+                    src={stream.albumArt}
+                    alt={stream.albumName}
+                    width={40}
+                    height={40}
+                    className="rounded shrink-0"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{stream.trackName}</p>
                     <p className="text-xs text-muted-foreground truncate">

@@ -11,14 +11,17 @@ export async function POST() {
     where: { albumArt: null },
   });
 
-  const trackIds = missing.map((m) => m.trackId);
-  if (trackIds.length === 0) {
-    return NextResponse.json({ updated: 0, total: 0, remaining: 0, message: "No tracks missing artwork" });
+  const SPOTIFY_ID_REGEX = /^[a-zA-Z0-9]{22}$/;
+  const spotifyIds = missing
+    .map((m) => m.trackId)
+    .filter((id) => !id.startsWith("lfm-") && SPOTIFY_ID_REGEX.test(id));
+  if (spotifyIds.length === 0) {
+    return NextResponse.json({ updated: 0, total: 0, remaining: 0, message: "No Spotify tracks missing artwork (Last.fm tracks are skipped)" });
   }
 
   const MAX_PER_RUN = 500;
-  const idsToProcess = trackIds.slice(0, MAX_PER_RUN);
-  const remaining = trackIds.length - idsToProcess.length;
+  const idsToProcess = spotifyIds.slice(0, MAX_PER_RUN);
+  const remaining = spotifyIds.length - idsToProcess.length;
 
   let updated = 0;
   const BATCH_SIZE = 50;

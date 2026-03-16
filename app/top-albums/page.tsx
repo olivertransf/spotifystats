@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { getTopAlbums, parseTimeRange } from "@/lib/stats";
 import { TimeRangeTabs } from "@/components/time-range-tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import Image from "next/image";
+import { AlbumArt } from "@/components/album-art";
 import { Clock, Headphones } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -44,17 +44,13 @@ export default async function TopAlbumsPage({
                   <span className="text-sm text-muted-foreground w-7 text-right shrink-0">
                     {i + 1}
                   </span>
-                  {album.albumArt ? (
-                    <Image
-                      src={album.albumArt}
-                      alt={album.albumName}
-                      width={44}
-                      height={44}
-                      className="rounded shrink-0"
-                    />
-                  ) : (
-                    <div className="w-11 h-11 rounded bg-secondary shrink-0" />
-                  )}
+                  <AlbumArt
+                    src={album.albumArt}
+                    alt={album.albumName}
+                    width={44}
+                    height={44}
+                    className="rounded shrink-0"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{album.albumName}</p>
                     <p className="text-sm text-muted-foreground truncate">
