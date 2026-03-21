@@ -54,6 +54,7 @@ cp .env.example .env
 | `DIRECT_URL` | Optional | Often same as `DATABASE_URL` for Neon; see host docs. |
 | `LASTFM_API_KEY` | **Yes** for live sync | Last.fm API key. |
 | `LASTFM_USER` | **Yes** for live sync | Your Last.fm username. |
+| `TIMEZONE` | **Recommended** | IANA name (e.g. `America/New_York`) for hour-of-day / day-of-week / daily charts. Many hosts use **UTC**; without this, “busiest hour” follows UTC, not your local time. |
 | `AUTH_KEY` | Optional | If set, `/me` requires auth (see below). |
 
 ---
@@ -155,6 +156,7 @@ Backfill uses **no Spotify API**: album art uses iTunes, Last.fm, and Cover Art 
 - **Last.fm sync does nothing** — Set `LASTFM_API_KEY` and `LASTFM_USER` in `.env` and restart the dev server. Until then, the API responds with `skipped: true` (not an error) so background refresh requests stay quiet.
 - **DB SSL** — Use `?sslmode=require` (or host equivalent) in `DATABASE_URL`.
 - **Empty charts** — Import the ZIP and sync Last.fm so rows exist.
+- **Wrong “busiest hour” / time-of-day** — Set `TIMEZONE` to your real timezone (IANA). Hosted Node often runs in UTC; hour buckets use `TIMEZONE` (or the server default).
 
 ---
 

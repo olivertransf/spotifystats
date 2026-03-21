@@ -10,11 +10,15 @@ import {
   subDays,
   format,
   parse,
-  getHours,
-  getDay,
   differenceInCalendarDays,
 } from "date-fns";
 import { DEFAULT_TIME_RANGE } from "@/lib/time-range";
+import {
+  getStatsTimeZone,
+  getHourInTimeZone,
+  getDayOfWeekInTimeZone,
+  formatCalendarDateInZone,
+} from "@/lib/stats-timezone";
 
 export type TimeRangePreset = "30d" | "3m" | "6m" | "1y" | "ytd" | "all";
 
@@ -194,6 +198,7 @@ export async function getTopAlbums(limit = 20, filter?: TimeRangeFilter) {
 }
 
 export async function getStreamsByHour(filter?: TimeRangeFilter) {
+  const tz = getStatsTimeZone();
   const where = filter ? buildWhere(filter) : {};
   const streams = await db.stream.findMany({
     where,
@@ -204,7 +209,7 @@ export async function getStreamsByHour(filter?: TimeRangeFilter) {
   for (let h = 0; h < 24; h++) byHour[h] = { streams: 0, minutes: 0 };
 
   for (const s of streams) {
-    const h = getHours(s.playedAt);
+    const h = getHourInTimeZone(s.playedAt, tz);
     byHour[h].streams++;
     byHour[h].minutes += Math.round(s.durationMs / 60000);
   }
@@ -217,6 +222,7 @@ export async function getStreamsByHour(filter?: TimeRangeFilter) {
 }
 
 export async function getStreamsByDayOfWeek(filter?: TimeRangeFilter) {
+  const tz = getStatsTimeZone();
   const where = filter ? buildWhere(filter) : {};
   const streams = await db.stream.findMany({
     where,
@@ -228,7 +234,7 @@ export async function getStreamsByDayOfWeek(filter?: TimeRangeFilter) {
   for (let d = 0; d < 7; d++) byDay[d] = { streams: 0, minutes: 0 };
 
   for (const s of streams) {
-    const d = getDay(s.playedAt);
+    const d = getDayOfWeekInTimeZone(s.playedAt, tz);
     byDay[d].streams++;
     byDay[d].minutes += Math.round(s.durationMs / 60000);
   }
@@ -241,6 +247,7 @@ export async function getStreamsByDayOfWeek(filter?: TimeRangeFilter) {
 }
 
 export async function getListeningHeatmap(filter?: TimeRangeFilter) {
+  const tz = getStatsTimeZone();
   const where = filter ? buildWhere(filter) : {};
   const streams = await db.stream.findMany({
     where,
@@ -258,8 +265,8 @@ export async function getListeningHeatmap(filter?: TimeRangeFilter) {
   }
 
   for (const s of streams) {
-    const d = getDay(s.playedAt);
-    const h = getHours(s.playedAt);
+    const d = getDayOfWeekInTimeZone(s.playedAt, tz);
+    const h = getHourInTimeZone(s.playedAt, tz);
     counts[`${d}-${h}`]++;
   }
 
@@ -315,6 +322,7 @@ export async function getStreamsByMonth(monthsBack = 12, filter?: TimeRangeFilte
 }
 
 export async function getStreamsByDay(filter?: TimeRangeFilter) {
+  const tz = getStatsTimeZone();
   const defaultSince = subDays(new Date(), 90);
   const where = resolveDateWhere(filter, defaultSince);
   const streams = await db.stream.findMany({
@@ -325,7 +333,7 @@ export async function getStreamsByDay(filter?: TimeRangeFilter) {
 
   const byDay: Record<string, { streams: number; minutes: number }> = {};
   for (const s of streams) {
-    const day = format(s.playedAt, "yyyy-MM-dd");
+    const day = formatCalendarDateInZone(s.playedAt, tz);
     if (!byDay[day]) byDay[day] = { streams: 0, minutes: 0 };
     byDay[day].streams++;
     byDay[day].minutes += Math.round(s.durationMs / 60000);
@@ -379,6 +387,7 @@ export async function getListeningDiversity(filter?: TimeRangeFilter) {
 }
 
 export async function getActivityHeatmap() {
+  const tz = getStatsTimeZone();
   const since = subMonths(new Date(), 12);
   const streams = await db.stream.findMany({
     where: { playedAt: { gte: since } },
@@ -387,7 +396,7 @@ export async function getActivityHeatmap() {
 
   const byDay: Record<string, number> = {};
   for (const s of streams) {
-    const day = format(s.playedAt, "yyyy-MM-dd");
+    const day = formatCalendarDateInZone(s.playedAt, tz);
     byDay[day] = (byDay[day] ?? 0) + 1;
   }
 

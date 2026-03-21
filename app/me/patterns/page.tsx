@@ -100,7 +100,7 @@ export default async function PatternsPage({
           <CardHeader>
             <CardTitle className="text-base font-semibold">By hour of day</CardTitle>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Total minutes and streams for each clock hour (local time).
+              Total minutes and streams per clock hour (uses `TIMEZONE` in `.env`, or your server’s zone).
             </p>
           </CardHeader>
           <CardContent>
