@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { searchArtist } from "@/lib/spotify";
 import { getArtistArtFromDiscogs } from "@/lib/discogs";
+import { getArtistArtFromDeezer } from "@/lib/deezer";
 import { getArtistArt } from "@/lib/lastfm";
 
 export const maxDuration = 60;
@@ -10,14 +10,10 @@ const MAX_PER_RUN = 25;
 const DELAY_MS = 2100;
 
 async function getArtistImage(artistName: string): Promise<string | null> {
-  try {
-    const spotify = await searchArtist(artistName);
-    if (spotify) return spotify;
-  } catch {
-    // Spotify 403 or other error
-  }
   const discogs = await getArtistArtFromDiscogs(artistName);
   if (discogs) return discogs;
+  const deezer = await getArtistArtFromDeezer(artistName);
+  if (deezer) return deezer;
   return getArtistArt(artistName);
 }
 
@@ -42,7 +38,12 @@ export async function POST() {
     let updated = 0;
 
     for (const m of toProcess) {
-      const art = await getArtistImage(m.artistName);
+      let art: string | null = null;
+      try {
+        art = await getArtistImage(m.artistName);
+      } catch (e) {
+        console.warn("Artist image lookup failed:", m.artistName, e);
+      }
       if (art) {
         const result = await db.stream.updateMany({
           where: { artistName: m.artistName, artistArt: null },

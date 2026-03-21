@@ -1,28 +1,24 @@
 /**
  * Backfill artist images for streams missing artwork.
- * Tries Spotify Search API first, then Last.fm. Requires SPOTIFY_* and LASTFM_API_KEY.
+ * Tries Discogs → Deezer → Last.fm (LASTFM_API_KEY helps Last.fm).
  *
  * Usage: npx tsx scripts/backfill-artists.ts
  */
 
 import "dotenv/config";
 import { db } from "../lib/db";
-import { searchArtist } from "../lib/spotify";
 import { getArtistArtFromDiscogs } from "../lib/discogs";
+import { getArtistArtFromDeezer } from "../lib/deezer";
 import { getArtistArt } from "../lib/lastfm";
 
 const MAX_PER_RUN = 25;
 const DELAY_MS = 2100;
 
 async function getArtistImage(artistName: string): Promise<string | null> {
-  try {
-    const spotify = await searchArtist(artistName);
-    if (spotify) return spotify;
-  } catch {
-    // Spotify 403 or other error
-  }
   const discogs = await getArtistArtFromDiscogs(artistName);
   if (discogs) return discogs;
+  const deezer = await getArtistArtFromDeezer(artistName);
+  if (deezer) return deezer;
   return getArtistArt(artistName);
 }
 

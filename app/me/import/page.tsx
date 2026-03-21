@@ -4,7 +4,16 @@ import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Upload, CheckCircle, AlertCircle, ExternalLink, ImageIcon, RefreshCw, Music2 } from "lucide-react";
+import {
+  Upload,
+  CheckCircle,
+  AlertCircle,
+  ExternalLink,
+  ImageIcon,
+  RefreshCw,
+  Music2,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "uploading" | "success" | "error";
@@ -25,45 +34,29 @@ export default function ImportPage() {
   const [backfillStatus, setBackfillStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [backfillResult, setBackfillResult] = useState<{ updated: number; total: number; remaining?: number } | null>(null);
   const [backfillError, setBackfillError] = useState<string | null>(null);
+  const [backfillDebug, setBackfillDebug] = useState<string | null>(null);
   const [backfillArtistsStatus, setBackfillArtistsStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [backfillArtistsResult, setBackfillArtistsResult] = useState<{ updated: number; total: number; remaining?: number } | null>(null);
   const [backfillArtistsError, setBackfillArtistsError] = useState<string | null>(null);
-  const [testStatus, setTestStatus] = useState<"idle" | "running" | "ok" | "fail">("idle");
-  const [testError, setTestError] = useState<string | null>(null);
+  const [backfillArtistsDebug, setBackfillArtistsDebug] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [syncResult, setSyncResult] = useState<{ synced: number; message?: string; error?: string; hint?: string } | null>(null);
   const [lastfmResult, setLastfmResult] = useState<{ synced: number; message?: string; error?: string } | null>(null);
-
-  async function runSync() {
-    setSyncResult(null);
-    try {
-      const res = await fetch("/api/sync", { method: "GET" });
-      const data = await res.json();
-      if (!res.ok) {
-        setSyncResult({
-          synced: 0,
-          error: data.detail ?? data.error ?? "Sync failed",
-          hint: data.hint,
-        });
-      } else {
-        setSyncResult({
-          synced: data.synced ?? 0,
-          message: data.message ?? (data.synced > 0 ? `Added ${data.synced} streams` : "No new tracks"),
-        });
-      }
-    } catch {
-      setSyncResult({ synced: 0, error: "Network error" });
-    }
-  }
+  const [lastfmLoading, setLastfmLoading] = useState(false);
 
   async function runLastfmSync() {
     setLastfmResult(null);
+    setLastfmLoading(true);
     try {
-      const res = await fetch("/api/sync-lastfm", { method: "GET" });
+      const res = await fetch("/api/sync-lastfm", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
         setLastfmResult({ synced: 0, error: data.detail ?? data.error ?? "Sync failed" });
+      } else if (data.skipped) {
+        setLastfmResult({
+          synced: 0,
+          message: data.detail ?? data.message ?? "Add LASTFM_USER and LASTFM_API_KEY to .env",
+        });
       } else {
         setLastfmResult({
           synced: data.synced ?? 0,
@@ -72,54 +65,50 @@ export default function ImportPage() {
       }
     } catch {
       setLastfmResult({ synced: 0, error: "Network error" });
-    }
-  }
-
-  async function testSpotify() {
-    setTestStatus("running");
-    setTestError(null);
-    try {
-      const res = await fetch("/api/spotify-test");
-      const data = await res.json();
-      if (!res.ok) {
-        setTestError(data.error ?? "Connection failed");
-        setTestStatus("fail");
-      } else {
-        setTestStatus("ok");
-      }
-    } catch {
-      setTestError("Network error");
-      setTestStatus("fail");
+    } finally {
+      setLastfmLoading(false);
     }
   }
 
   async function runBackfill() {
     setBackfillStatus("running");
     setBackfillError(null);
+    setBackfillDebug(null);
+    let responseDebug: string | null = null;
     try {
       const res = await fetch("/api/backfill-art", { method: "POST" });
       const data = await res.json();
+      responseDebug = JSON.stringify({ httpStatus: res.status, ...data }, null, 2);
+      setBackfillDebug(responseDebug);
       if (!res.ok) throw new Error(data.error ?? "Backfill failed");
       setBackfillResult({ updated: data.updated, total: data.total ?? 0, remaining: data.remaining });
       setBackfillStatus("done");
     } catch (e) {
       setBackfillStatus("error");
-      setBackfillError(e instanceof Error ? e.message : "Backfill failed");
+      const msg = e instanceof Error ? e.message : "Backfill failed";
+      setBackfillError(msg);
+      setBackfillDebug(responseDebug ?? JSON.stringify({ error: msg }, null, 2));
     }
   }
 
   async function runBackfillArtists() {
     setBackfillArtistsStatus("running");
     setBackfillArtistsError(null);
+    setBackfillArtistsDebug(null);
+    let responseDebug: string | null = null;
     try {
       const res = await fetch("/api/backfill-artists", { method: "POST" });
       const data = await res.json();
+      responseDebug = JSON.stringify({ httpStatus: res.status, ...data }, null, 2);
+      setBackfillArtistsDebug(responseDebug);
       if (!res.ok) throw new Error(data.error ?? "Backfill failed");
       setBackfillArtistsResult({ updated: data.updated, total: data.total ?? 0, remaining: data.remaining });
       setBackfillArtistsStatus("done");
     } catch (e) {
       setBackfillArtistsStatus("error");
-      setBackfillArtistsError(e instanceof Error ? e.message : "Backfill failed");
+      const msg = e instanceof Error ? e.message : "Backfill failed";
+      setBackfillArtistsError(msg);
+      setBackfillArtistsDebug(responseDebug ?? JSON.stringify({ error: msg }, null, 2));
     }
   }
 
@@ -180,7 +169,7 @@ export default function ImportPage() {
       <div>
         <h1 className="text-3xl font-bold">Import Spotify Data</h1>
         <p className="text-muted-foreground mt-1">
-          Upload your Spotify data export to load your full listening history.
+          Upload your Spotify data export for history. New listens sync from Last.fm only (works without Spotify Premium).
         </p>
       </div>
 
@@ -274,32 +263,68 @@ export default function ImportPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
+            <Music2 className="h-4 w-4" />
+            Sync from Last.fm
+          </CardTitle>
+          <CardDescription>
+            Ongoing plays are pulled from your Last.fm scrobbles, not the Spotify API. Connect Spotify to Last.fm in the Spotify app (Settings → Social).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>1. Create a free account at last.fm</p>
+            <p>2. In Spotify: Settings → Social → Connect to Last.fm</p>
+            <p>3. Create an API key at last.fm/api/account/create</p>
+            <p>4. Set <code className="text-foreground">LASTFM_API_KEY</code> and <code className="text-foreground">LASTFM_USER</code> in your <code className="text-foreground">.env</code></p>
+          </div>
+          <button
+            type="button"
+            onClick={runLastfmSync}
+            disabled={lastfmLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm disabled:opacity-60 disabled:pointer-events-none"
+          >
+            {lastfmLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <RefreshCw className="h-4 w-4" aria-hidden />
+            )}
+            {lastfmLoading ? "Syncing…" : "Sync from Last.fm"}
+          </button>
+          {lastfmResult && (
+            <p className={`text-sm ${lastfmResult.error ? "text-destructive" : "text-muted-foreground"}`}>
+              {lastfmResult.error ?? lastfmResult.message}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
             <ImageIcon className="h-4 w-4" />
             Backfill album artwork
           </CardTitle>
           <CardDescription>
-            Imported streams don&apos;t include images. This fetches artwork from Spotify for tracks that are missing it.
+            Imported streams don&apos;t include images. This looks up cover art via iTunes, Last.fm (if configured), and Cover Art Archive.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={testSpotify}
-              disabled={testStatus === "running"}
-              className="text-xs px-3 py-1.5 rounded bg-secondary hover:bg-secondary/80 disabled:opacity-50"
-            >
-              {testStatus === "running" ? "Testing…" : testStatus === "ok" ? "Connection OK" : "Test Spotify connection"}
-            </button>
-            {testStatus === "ok" && <span className="text-xs text-primary">Spotify credentials work</span>}
-            {testStatus === "fail" && testError && <span className="text-xs text-destructive">{testError}</span>}
-          </div>
           <button
             onClick={runBackfill}
             disabled={backfillStatus === "running"}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm transition-colors disabled:opacity-60 disabled:pointer-events-none"
           >
-            {backfillStatus === "running" ? "Fetching artwork..." : "Backfill missing artwork"}
+            {backfillStatus === "running" ? (
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+            ) : null}
+            {backfillStatus === "running" ? "Fetching artwork…" : "Backfill missing artwork"}
           </button>
+          {backfillStatus === "running" && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin shrink-0 text-primary" aria-hidden />
+              <span>Server is looking up cover art (can take up to ~1 min).</span>
+            </p>
+          )}
           {backfillStatus === "done" && backfillResult && (
             <p className="text-sm text-muted-foreground mt-3">
               Updated {backfillResult.updated.toLocaleString()} streams with album art
@@ -312,6 +337,14 @@ export default function ImportPage() {
           {backfillStatus === "error" && (
             <p className="text-sm text-destructive mt-3">{backfillError ?? "Backfill failed."}</p>
           )}
+          {backfillDebug && (backfillStatus === "done" || backfillStatus === "error") && (
+            <details className="mt-3 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-left">
+              <summary className="cursor-pointer text-xs text-muted-foreground select-none">Response details</summary>
+              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-muted-foreground">
+                {backfillDebug}
+              </pre>
+            </details>
+          )}
         </CardContent>
       </Card>
 
@@ -322,17 +355,26 @@ export default function ImportPage() {
             Backfill artist images
           </CardTitle>
           <CardDescription>
-            Fetches artist photos from Last.fm for streams missing them. Requires LASTFM_API_KEY.
+            Tries Discogs, Deezer, then Last.fm for artist photos. Last.fm works best with LASTFM_API_KEY set.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <button
             onClick={runBackfillArtists}
             disabled={backfillArtistsStatus === "running"}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm transition-colors disabled:opacity-60 disabled:pointer-events-none"
           >
-            {backfillArtistsStatus === "running" ? "Fetching images..." : "Backfill artist images"}
+            {backfillArtistsStatus === "running" ? (
+              <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+            ) : null}
+            {backfillArtistsStatus === "running" ? "Fetching images…" : "Backfill artist images"}
           </button>
+          {backfillArtistsStatus === "running" && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin shrink-0 text-primary" aria-hidden />
+              <span>Server is resolving artist photos (can take ~30s–1 min per batch).</span>
+            </p>
+          )}
           {backfillArtistsStatus === "done" && backfillArtistsResult && (
             <p className="text-sm text-muted-foreground mt-3">
               Updated {backfillArtistsResult.updated.toLocaleString()} streams with artist images
@@ -345,68 +387,13 @@ export default function ImportPage() {
           {backfillArtistsStatus === "error" && (
             <p className="text-sm text-destructive mt-3">{backfillArtistsError ?? "Backfill failed."}</p>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" />
-            Sync now
-          </CardTitle>
-          <CardDescription>
-            Manually fetch new plays from Spotify. Runs automatically every hour, or click to sync now.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <button
-            onClick={runSync}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Sync now
-          </button>
-          {syncResult && (
-            <div className="space-y-1">
-              <p className={`text-sm ${syncResult.error ? "text-destructive" : "text-muted-foreground"}`}>
-                {syncResult.error ?? (syncResult.synced > 0 ? `Added ${syncResult.synced} streams.` : syncResult.message)}
-              </p>
-              {syncResult.hint && (
-                <p className="text-xs text-muted-foreground">{syncResult.hint}</p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Music2 className="h-4 w-4" />
-            Sync from Last.fm
-          </CardTitle>
-          <CardDescription>
-            Works without Spotify Premium. Connect Spotify to Last.fm, then sync your scrobbles here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p>1. Create a free account at last.fm</p>
-            <p>2. In Spotify: Settings → Social → Connect to Last.fm</p>
-            <p>3. Get an API key at last.fm/api/account/create</p>
-            <p>4. Add to Netlify env: LASTFM_API_KEY, LASTFM_USER (your Last.fm username)</p>
-          </div>
-          <button
-            onClick={runLastfmSync}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 font-medium text-sm"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Sync from Last.fm
-          </button>
-          {lastfmResult && (
-            <p className={`text-sm ${lastfmResult.error ? "text-destructive" : "text-muted-foreground"}`}>
-              {lastfmResult.error ?? lastfmResult.message}
-            </p>
+          {backfillArtistsDebug && (backfillArtistsStatus === "done" || backfillArtistsStatus === "error") && (
+            <details className="mt-3 rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-left">
+              <summary className="cursor-pointer text-xs text-muted-foreground select-none">Response details</summary>
+              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] leading-relaxed text-muted-foreground">
+                {backfillArtistsDebug}
+              </pre>
+            </details>
           )}
         </CardContent>
       </Card>

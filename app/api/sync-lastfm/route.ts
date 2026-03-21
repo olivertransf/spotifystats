@@ -5,12 +5,22 @@ import { getRecentTracks } from "@/lib/lastfm";
 export const maxDuration = 30;
 
 export async function POST() {
-  const username = process.env.LASTFM_USER;
-  if (!username || !process.env.LASTFM_API_KEY) {
-    return NextResponse.json(
-      { error: "Missing LASTFM_USER or LASTFM_API_KEY in environment" },
-      { status: 500 }
-    );
+  const username = process.env.LASTFM_USER?.trim();
+  const apiKey = process.env.LASTFM_API_KEY?.trim();
+  if (!username || !apiKey) {
+    // 200 (not 400): SyncOnLoad POSTs on every page load; missing env is expected until configured.
+    const detail =
+      !apiKey && !username
+        ? "Set LASTFM_USER and LASTFM_API_KEY in .env"
+        : !apiKey
+          ? "Set LASTFM_API_KEY in .env"
+          : "Set LASTFM_USER in .env (your Last.fm profile name, e.g. the name in last.fm/user/yourname)";
+    return NextResponse.json({
+      synced: 0,
+      skipped: true,
+      message: "Last.fm not configured",
+      detail,
+    });
   }
 
   try {

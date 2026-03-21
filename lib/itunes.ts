@@ -1,3 +1,5 @@
+import { safeJson } from "@/lib/safe-json";
+
 export async function getAlbumArtFromItunes(
   artistName: string,
   albumName: string
@@ -8,12 +10,21 @@ export async function getAlbumArtFromItunes(
     `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&entity=album&limit=3`
   );
   if (!res.ok) return null;
-  const data = await res.json();
+  const data = (await safeJson(res)) as {
+    results?: {
+      artistName?: string;
+      collectionName?: string;
+      artworkUrl600?: string;
+      artworkUrl100?: string;
+      artworkUrl60?: string;
+    }[];
+  } | null;
+  if (!data) return null;
   const results = data.results ?? [];
   const artistLower = artistName.trim().toLowerCase();
   const albumLower = albumName.trim().toLowerCase();
   const match = results.find(
-    (r: { artistName?: string; collectionName?: string }) =>
+    (r) =>
       r.artistName?.toLowerCase().includes(artistLower) &&
       r.collectionName?.toLowerCase().includes(albumLower)
   ) ?? results[0];

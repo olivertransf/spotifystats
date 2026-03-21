@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const AUTH_COOKIE = "stats_auth";
+const AUTH_COOKIE = "soundfolio_auth";
 
 export async function GET(request: NextRequest) {
   const key = process.env.AUTH_KEY;

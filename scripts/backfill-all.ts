@@ -47,7 +47,7 @@ async function main() {
 
   runUntilDone(
     "backfill-art.ts",
-    /No Spotify tracks missing artwork/,
+    /No tracks missing album artwork/,
     "Album art"
   );
 

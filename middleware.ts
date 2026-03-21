@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const AUTH_COOKIE = "stats_auth";
+const AUTH_COOKIE = "soundfolio_auth";
 
 export function middleware(request: NextRequest) {
   const key = process.env.AUTH_KEY;

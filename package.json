@@ -1,5 +1,5 @@
 {
-  "name": "spotifystats",
+  "name": "soundfolio",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,12 +11,11 @@
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",
     "db:studio": "npx prisma studio",
-    "get-token": "npx tsx scripts/get-refresh-token.ts",
-    "test-token": "npx tsx scripts/test-token.ts",
     "backfill-art": "npx tsx scripts/backfill-art.ts",
     "backfill-artists": "npx tsx scripts/backfill-artists.ts",
     "backfill-all": "npx tsx scripts/backfill-all.ts",
-    "clear-placeholder-art": "npx tsx scripts/clear-placeholder-art.ts"
+    "clear-placeholder-art": "npx tsx scripts/clear-placeholder-art.ts",
+    "export-obsidian": "npx tsx scripts/export-obsidian-stats.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

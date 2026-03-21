@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import AdmZip from "adm-zip";
 import { db } from "@/lib/db";
 
+function parseSpotifyPlayedAt(ts: string): Date {
+  const s = String(ts).trim();
+  if (/^\d+$/.test(s)) {
+    const n = Number(s);
+    return new Date(n > 1e12 ? n : n * 1000);
+  }
+  return new Date(s);
+}
+
 interface SpotifyStreamEntry {
   ts: string;
   ms_played: number;
@@ -46,13 +55,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const validStreams = historyEntries.filter(
-      (e) =>
-        e.master_metadata_track_name &&
-        e.master_metadata_album_artist_name &&
-        e.spotify_track_uri &&
-        e.ms_played > 30000
-    );
+    const validStreams = historyEntries.filter((e) => {
+      if (
+        !e.master_metadata_track_name ||
+        !e.master_metadata_album_artist_name ||
+        !e.spotify_track_uri ||
+        e.ms_played <= 30000
+      ) {
+        return false;
+      }
+      const playedAt = parseSpotifyPlayedAt(e.ts);
+      return !Number.isNaN(playedAt.getTime());
+    });
 
     let inserted = 0;
     let skipped = 0;
@@ -70,7 +84,7 @@ export async function POST(req: NextRequest) {
           albumName: e.master_metadata_album_album_name ?? "",
           albumArt: null,
           durationMs: e.ms_played,
-          playedAt: new Date(e.ts),
+          playedAt: parseSpotifyPlayedAt(e.ts),
         })),
         skipDuplicates: true,
       });

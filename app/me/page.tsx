@@ -1,16 +1,26 @@
 import { Suspense } from "react";
-import { Clock, Headphones, Music, Mic2 } from "lucide-react";
+import {
+  Clock,
+  Headphones,
+  Music,
+  Disc3,
+  Users,
+  CalendarDays,
+  Activity,
+} from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ListeningChart } from "@/components/listening-chart";
-import { TimeRangeTabs } from "@/components/time-range-tabs";
+import { ListeningActivity } from "@/components/listening-activity";
+import { PageHeader } from "@/components/page-header";
 import {
   getTotalStats,
   getTopTracks,
   getTopArtists,
-  getStreamsByMonth,
-  getLastSyncedAt,
+  getLatestPlayAt,
   parseTimeRange,
+  getListeningDiversity,
+  getListeningSpan,
+  calendarDaysInFilter,
 } from "@/lib/stats";
 import { formatDistanceToNow } from "date-fns";
 import { AlbumArt } from "@/components/album-art";
@@ -26,19 +36,25 @@ export default async function OverviewPage({
   const params = await searchParams;
   const filter = parseTimeRange(params.range, params.from, params.to);
 
-  const [stats, topTracks, topArtists, monthlyData, lastSynced] = await Promise.all([
+  const [
+    stats,
+    topTracks,
+    topArtists,
+    latestPlayAt,
+    diversity,
+    span,
+  ] = await Promise.all([
     getTotalStats(filter),
     getTopTracks(5, filter),
     getTopArtists(5, filter),
-    getStreamsByMonth(12, filter),
-    getLastSyncedAt(),
+    getLatestPlayAt(),
+    getListeningDiversity(filter),
+    getListeningSpan(filter),
   ]);
 
-  const chartData = monthlyData.map((d) => ({
-    label: d.month,
-    minutes: d.minutes,
-    streams: d.streams,
-  }));
+  const days = calendarDaysInFilter(filter, span);
+  const avgMinPerDay = Math.round(stats.totalMinutes / days);
+  const avgStreamsPerDay = Math.round(stats.totalStreams / days);
 
   const hasData = stats.totalStreams > 0;
 
@@ -63,77 +79,94 @@ export default async function OverviewPage({
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Overview</h1>
-          {lastSynced && (
-            <p className="text-muted-foreground text-sm mt-1">
-              Last synced {formatDistanceToNow(lastSynced, { addSuffix: true })}
-            </p>
-          )}
-        </div>
-        <Suspense>
-          <TimeRangeTabs />
-        </Suspense>
-      </div>
+    <div className="space-y-10">
+      <PageHeader
+        title="Overview"
+        description="Listening volume, diversity, and trends for the selected period. Charts default to year-to-date; change the range to compare."
+        periodLabel={filter.label}
+      />
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      {latestPlayAt && (
+        <p className="text-muted-foreground text-xs -mt-4">
+          Latest play {formatDistanceToNow(latestPlayAt, { addSuffix: true })}
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard
-          label="Total Minutes"
+          label="Total minutes"
           value={stats.totalMinutes.toLocaleString()}
-          sub={`${stats.totalHours.toLocaleString()} hours`}
+          sub={`${stats.totalHours.toLocaleString()} h total`}
           icon={Clock}
         />
         <StatCard
-          label="Total Streams"
+          label="Total streams"
           value={stats.totalStreams.toLocaleString()}
           icon={Headphones}
         />
         <StatCard
-          label="Top Track"
-          value={topTracks[0]?.trackName ?? "—"}
-          sub={topTracks[0]?.artistName}
-          icon={Music}
+          label="Unique tracks"
+          value={diversity.uniqueTracks.toLocaleString()}
+          sub="Distinct songs played"
+          icon={Disc3}
         />
         <StatCard
-          label="Top Artist"
-          value={topArtists[0]?.artistName ?? "—"}
-          sub={topArtists[0] ? `${topArtists[0].streams.toLocaleString()} streams` : undefined}
-          icon={Mic2}
+          label="Unique artists"
+          value={diversity.uniqueArtists.toLocaleString()}
+          sub="Distinct artists"
+          icon={Users}
+        />
+        <StatCard
+          label="Avg min / day"
+          value={avgMinPerDay.toLocaleString()}
+          sub={`~${days.toLocaleString()} day window`}
+          icon={CalendarDays}
+        />
+        <StatCard
+          label="Avg streams / day"
+          value={avgStreamsPerDay.toLocaleString()}
+          icon={Activity}
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Listening Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ListeningChart data={chartData} mode="months" />
-        </CardContent>
-      </Card>
+      <Suspense
+        fallback={
+          <Card className="border-border/50 bg-card/60 ring-1 ring-border/40">
+            <CardContent className="h-[360px] flex items-center justify-center text-muted-foreground text-sm">
+              Loading chart…
+            </CardContent>
+          </Card>
+        }
+      >
+        <ListeningActivity periodLabel={filter.label} />
+      </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="border-border/50 bg-card/60 ring-1 ring-border/40">
           <CardHeader>
-            <CardTitle className="text-base">Top Tracks</CardTitle>
+            <CardTitle className="text-base font-semibold">Top tracks</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             {topTracks.map((track, i) => (
-              <div key={track.trackId} className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground w-4 shrink-0">{i + 1}</span>
+              <div
+                key={track.trackId}
+                className="flex items-center gap-3 py-1.5 rounded-md hover:bg-secondary/40 px-1 -mx-1 transition-colors"
+              >
+                <span className="text-xs text-muted-foreground w-5 shrink-0 tabular-nums">
+                  {i + 1}
+                </span>
                 <AlbumArt
                   src={track.albumArt}
                   alt={track.albumName}
-                  width={36}
-                  height={36}
-                  className="rounded"
+                  width={40}
+                  height={40}
+                  className="rounded-md shadow-sm"
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{track.trackName}</p>
                   <p className="text-xs text-muted-foreground truncate">{track.artistName}</p>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
+                <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
                   {track.streams} plays
                 </span>
               </div>
@@ -141,22 +174,32 @@ export default async function OverviewPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border/50 bg-card/60 ring-1 ring-border/40">
           <CardHeader>
-            <CardTitle className="text-base">Top Artists</CardTitle>
+            <CardTitle className="text-base font-semibold">Top artists</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             {topArtists.map((artist, i) => (
-              <div key={artist.artistName} className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground w-4 shrink-0">{i + 1}</span>
-                <ArtistArt src={artist.artistArt} alt={artist.artistName} width={32} height={32} />
+              <div
+                key={artist.artistName}
+                className="flex items-center gap-3 py-1.5 rounded-md hover:bg-secondary/40 px-1 -mx-1 transition-colors"
+              >
+                <span className="text-xs text-muted-foreground w-5 shrink-0 tabular-nums">
+                  {i + 1}
+                </span>
+                <ArtistArt
+                  src={artist.artistArt}
+                  alt={artist.artistName}
+                  width={36}
+                  height={36}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{artist.artistName}</p>
                   <p className="text-xs text-muted-foreground">
                     {artist.minutesListened.toLocaleString()} min
                   </p>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">
+                <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
                   {artist.streams.toLocaleString()} plays
                 </span>
               </div>

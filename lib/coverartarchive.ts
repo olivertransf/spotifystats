@@ -1,4 +1,6 @@
-const USER_AGENT = "SpotifyStats/1.0 +https://github.com/olivertransf/spotifystats";
+import { safeJson } from "@/lib/safe-json";
+
+const USER_AGENT = "Soundfolio/1.0 (+https://github.com/yourusername/soundfolio)";
 
 export async function getAlbumArtFromCoverArtArchive(
   artistName: string,
@@ -11,7 +13,8 @@ export async function getAlbumArtFromCoverArtArchive(
     { headers: { "User-Agent": USER_AGENT } }
   );
   if (!searchRes.ok) return null;
-  const searchData = await searchRes.json();
+  const searchData = (await safeJson(searchRes)) as { releases?: { id?: string; title?: string }[] } | null;
+  if (!searchData) return null;
   const releases = searchData.releases ?? [];
   const albumLower = albumName.trim().toLowerCase();
   const release =
@@ -29,7 +32,10 @@ export async function getAlbumArtFromCoverArtArchive(
     { headers: { Accept: "application/json" } }
   );
   if (!caaRes.ok) return null;
-  const caaData = await caaRes.json();
+  const caaData = (await safeJson(caaRes)) as {
+    images?: { front?: boolean; thumbnails?: Record<string, string>; image?: string }[];
+  } | null;
+  if (!caaData) return null;
   const front = caaData.images?.find((img: { front?: boolean }) => img.front);
   if (!front) return null;
   return (

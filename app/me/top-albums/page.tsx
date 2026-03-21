@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getTopAlbums, parseTimeRange } from "@/lib/stats";
 import { TimeRangeTabs } from "@/components/time-range-tabs";
+import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlbumArt } from "@/components/album-art";
 import { Clock, Headphones } from "lucide-react";
@@ -17,20 +18,18 @@ export default async function TopAlbumsPage({
   const albums = await getTopAlbums(50, filter);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Top Albums</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Ranked by stream count
-          </p>
-        </div>
+    <div className="space-y-10">
+      <PageHeader
+        title="Top albums"
+        description="Ranked by stream count for the selected period."
+        periodLabel={filter.label}
+      >
         <Suspense>
           <TimeRangeTabs />
         </Suspense>
-      </div>
+      </PageHeader>
 
-      <Card>
+      <Card className="border-border/80">
         <CardContent className="pt-6">
           {albums.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">No data for this time range.</p>

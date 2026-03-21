@@ -1,3 +1,5 @@
+import { safeJson } from "@/lib/safe-json";
+
 const API_KEY = process.env.LASTFM_API_KEY!;
 const BASE = "https://ws.audioscrobbler.com/2.0/";
 
@@ -33,7 +35,15 @@ export async function getRecentTracks(
   if (fromTimestamp) params.set("from", String(fromTimestamp));
 
   const res = await fetch(`${BASE}?${params}`);
-  const data: LastFmResponse = await res.json();
+  const text = await res.text();
+  let data: LastFmResponse;
+  try {
+    data = JSON.parse(text) as LastFmResponse;
+  } catch {
+    throw new Error(
+      `Last.fm returned non-JSON (HTTP ${res.status}). Check network or API status.`
+    );
+  }
 
   if (data.error) {
     throw new Error(data.message ?? `Last.fm API error ${data.error}`);
@@ -69,11 +79,15 @@ export async function getTrackArt(artist: string, track: string): Promise<string
     format: "json",
   });
   const res = await fetch(`${BASE}?${params}`);
-  const data = await res.json();
-  if (data.error) return null;
+  const data = (await safeJson(res)) as {
+    error?: number;
+    track?: { album?: { image?: { size?: string; "#text"?: string }[] } };
+  } | null;
+  if (!data || data.error) return null;
   const album = data.track?.album;
   const imgs = Array.isArray(album?.image) ? album.image : [];
-  const img = imgs.find((i: { size?: string }) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
+  const img =
+    imgs.find((i) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
   const url = img?.["#text"];
   if (!url || url.length === 0 || isPlaceholderUrl(url)) return null;
   return url;
@@ -94,10 +108,14 @@ export async function getArtistArt(artist: string): Promise<string | null> {
     format: "json",
   });
   const res = await fetch(`${BASE}?${params}`);
-  const data = await res.json();
-  if (data.error) return null;
+  const data = (await safeJson(res)) as {
+    error?: number;
+    artist?: { image?: { size?: string; "#text"?: string }[] };
+  } | null;
+  if (!data || data.error) return null;
   const imgs = Array.isArray(data.artist?.image) ? data.artist.image : [];
-  const img = imgs.find((i: { size?: string }) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
+  const img =
+    imgs.find((i) => i?.size === "extralarge" || i?.size === "large") ?? imgs[imgs.length - 1];
   const url = img?.["#text"];
   if (!url || url.length === 0 || isPlaceholderUrl(url)) return null;
   return url;

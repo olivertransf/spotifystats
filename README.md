@@ -1,91 +1,163 @@
-# Spotify Stats
+# Soundfolio
 
-A personal Spotify listening stats dashboard. Import your full Spotify history, then auto-sync new plays going forward.
+Self-hosted **listening history and stats**: import an **Extended streaming history** ZIP from your Spotify account (privacy export), then **sync new listens from Last.fm** only. Stack: **Next.js**, **Prisma**, **PostgreSQL**.
 
-## Setup
+**Default UI range:** **This year** (`ytd`). Use the period control or `?range=all` for all time.
 
-### 1. Create a Spotify App
+**Disclaimer:** Not affiliated with Spotify. *Spotify* is a trademark of Spotify AB. The app reads the official **account data export** (ZIP), not the Spotify Web API.
 
-1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
-2. Click **Create app**
-3. Add `http://127.0.0.1:3001/callback` as a Redirect URI
-4. Copy your **Client ID** and **Client Secret**
+---
 
-### 2. Create a Neon Database
+## Database (PostgreSQL)
 
-1. Sign up at [console.neon.tech](https://console.neon.tech) (free)
-2. Create a new project
-3. Copy the **Connection string** from the dashboard
+Soundfolio stores every play (`Stream` rows) in Postgres via Prisma.
 
-### 3. Configure environment variables
+| What | Why |
+|------|-----|
+| **`DATABASE_URL`** | Connection string the app and Prisma use at runtime. **Required.** |
+| **`DIRECT_URL`** | Some hosts (e.g. Neon) use a separate URL for migrations; if your host docs don’t mention it, you can set it **equal to `DATABASE_URL`** or omit it. |
+| **`npm run db:push`** | Applies the schema in `prisma/schema.prisma` to your database (good for first setup and solo projects). |
+| **`npm run db:migrate`** | Use when you want versioned migrations (teams / production discipline). |
+| **`npm run db:generate`** | Regenerates the Prisma client after schema changes (also runs during `npm run build`). |
+| **`npm run db:studio`** | Opens a local GUI to browse tables. |
 
-Copy `.env.example` to `.env` and fill in your values:
+**Typical cloud Postgres:** enable SSL in the URL (often `?sslmode=require`). Example: `postgresql://USER:PASSWORD@HOST/DB?sslmode=require`.
+
+Never commit `.env`.
+
+---
+
+## Easiest setup (TL;DR)
+
+You need: **Node 20+**, **PostgreSQL**, **Last.fm API key + username**, and the **Spotify privacy ZIP** (not the developer API).
+
+```bash
+git clone <your-repo-url> && cd soundfolio   # or your folder name
+npm install
+cp .env.example .env
+```
+
+1. Put your Postgres URL in **`DATABASE_URL`** (and **`DIRECT_URL`** if your host requires it).
+2. **`LASTFM_API_KEY`** + **`LASTFM_USER`** — from [Last.fm API](https://www.last.fm/api/account/create), and connect your Spotify app to Last.fm so scrobbles show up.
+3. **`npm run db:push`**
+4. **`npm run dev`** → **Import** → upload the ZIP → **Sync from Last.fm**.
+
+**Optional:** `AUTH_KEY` locks `/me` routes.
+
+---
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | **Yes** | PostgreSQL URL. |
+| `DIRECT_URL` | Optional | Often same as `DATABASE_URL` for Neon; see host docs. |
+| `LASTFM_API_KEY` | **Yes** for live sync | Last.fm API key. |
+| `LASTFM_USER` | **Yes** for live sync | Your Last.fm username. |
+| `AUTH_KEY` | Optional | If set, `/me` requires auth (see below). |
+
+---
+
+## Quick start (detailed)
+
+### 1. Clone and install
+
+```bash
+git clone <your-fork-or-repo-url>
+cd soundfolio
+npm install
+```
+
+### 2. Configure `.env`
 
 ```bash
 cp .env.example .env
 ```
 
-```env
-DATABASE_URL="postgresql://..."   # from Neon
-DIRECT_URL="postgresql://..."     # same URL (or pooler URL if Neon provides one)
-SPOTIFY_CLIENT_ID="..."
-SPOTIFY_CLIENT_SECRET="..."
-SPOTIFY_REFRESH_TOKEN="..."       # generated in step 4
-```
+Fill in `DATABASE_URL`, `LASTFM_API_KEY`, and `LASTFM_USER`.
 
-### 4. Generate your Spotify refresh token
-
-```bash
-npm run get-token
-```
-
-Open the URL it prints, approve access, then copy the token it prints into your `.env`.
-
-### 5. Set up the database
+### 3. Create tables
 
 ```bash
 npm run db:push
+npm run db:generate
 ```
 
-### 6. Import your Spotify history
-
-1. Go to [spotify.com/account/privacy](https://www.spotify.com/account/privacy/)
-2. Check **Extended streaming history** only
-3. Click **Request data** — Spotify will email you in 1-5 days
-4. Download the ZIP file
-5. Start the app, go to the Import page, upload the ZIP
-
-### 7. Run locally
+### 4. Run
 
 ```bash
 npm run dev
 ```
 
-## Last.fm sync (optional, no Premium needed)
+### 5. Import and sync
 
-If Spotify sync fails due to Premium requirement, use Last.fm instead:
+1. Request **Extended streaming history** from [Spotify account privacy](https://www.spotify.com/account/privacy/) (delivery can take days).
+2. Upload the ZIP in **Import**.
+3. Connect Spotify → Last.fm in the Spotify app (Settings → Social) so new plays scrobble.
+4. Use **Sync from Last.fm** on Import (the app also triggers a background sync on load).
 
-1. Create account at [last.fm](https://www.last.fm)
-2. In Spotify: Settings → Social → Connect to Last.fm
-3. Get API key at [last.fm/api/account/create](https://www.last.fm/api/account/create)
-4. Add to Netlify: `LASTFM_API_KEY`, `LASTFM_USER` (your username)
-5. Click "Sync from Last.fm" on the Import page, or it runs hourly with the cron
+---
 
-## Deployment (Netlify)
+## Backfill: album and artist images
 
-1. Push to GitHub
-2. Connect repo in Netlify
-3. Add all `.env` values as **Environment variables** in Netlify settings
-4. Add `CRON_SECRET` — any random string (secures the sync endpoint)
-5. Optionally add `LASTFM_API_KEY` and `LASTFM_USER` for Last.fm sync (works without Premium)
-6. Deploy — the scheduled function runs hourly (Spotify + Last.fm if configured)
+**Does it run automatically?** **Partly.** On each **full browser load** (hard refresh or opening the site in a new tab), `components/sync-on-load.tsx` fires one **batch** each of:
+
+- Last.fm sync (`POST /api/sync-lastfm`)
+- Album art backfill (`POST /api/backfill-art`)
+- Artist image backfill (`POST /api/backfill-artists`)
+
+**You usually still need to run backfill more than once** if you have many tracks or artists missing images:
+
+| Route | Why |
+|-------|-----|
+| **In-app limits** | Each API call processes a **fixed batch** (e.g. dozens of album groups / artists per request). A full library is not filled in a single run. |
+| **Client navigation** | Clicking around with Next.js `<Link>` does **not** remount the layout, so **SyncOnLoad does not run again** until you **refresh the page** or open the app again. |
+| **Manual** | Use **Import → Backfill** buttons anytime; they run the same endpoints as the background job, with loading feedback and response details. |
+| **CLI** | `npm run backfill-art` / `backfill-artists` / `backfill-all` run larger batches from your machine (good for finishing a backlog). |
+
+**Summary:** backfill **auto-starts** a little on each full load, but **does not** guarantee a complete fill in one go—repeat refresh, use the Import page buttons, or run the scripts until `remaining` is 0 in the response.
+
+---
+
+## `/me` access (`AUTH_KEY`)
+
+- **Unset:** `/me` is open (fine for trusted local use).
+- **Set:** use `?key=` once or the auth page so the cookie is set; mirror the value in production env.
+
+---
+
+## Netlify
+
+1. Connect the repo; build uses `netlify.toml` (`prisma generate` + `next build`).
+2. Set env: `DATABASE_URL`, `LASTFM_API_KEY`, `LASTFM_USER`, and optional `DIRECT_URL`, `AUTH_KEY`.
+
+---
+
+## Album and artist images
+
+Backfill uses **no Spotify API**: album art uses iTunes, Last.fm, and Cover Art Archive; artist images use Discogs, Deezer, and Last.fm. See **[Backfill: album and artist images](#backfill-album-and-artist-images)** for automatic vs manual runs and when to run scripts.
+
+---
 
 ## Scripts
 
 | Command | Description |
-|---|---|
-| `npm run dev` | Start dev server |
-| `npm run get-token` | Generate Spotify refresh token |
-| `npm run db:push` | Push schema to database |
-| `npm run db:studio` | Open Prisma Studio (DB GUI) |
-| `npm run build` | Build for production |
+|---------|-------------|
+| `npm run dev` | Dev server (port 3000). |
+| `npm run build` / `start` | Production build / run. |
+| `npm run db:push` / `db:migrate` / `db:generate` / `db:studio` | Prisma. |
+| `npm run backfill-*` | Art / artists backfill CLI. |
+
+---
+
+## Troubleshooting
+
+- **Last.fm sync does nothing** — Set `LASTFM_API_KEY` and `LASTFM_USER` in `.env` and restart the dev server. Until then, the API responds with `skipped: true` (not an error) so background refresh requests stay quiet.
+- **DB SSL** — Use `?sslmode=require` (or host equivalent) in `DATABASE_URL`.
+- **Empty charts** — Import the ZIP and sync Last.fm so rows exist.
+
+---
+
+## License
+
+Add a `LICENSE` file if you publish the repo.

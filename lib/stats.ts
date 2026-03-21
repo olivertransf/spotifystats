@@ -3,15 +3,22 @@ import {
   startOfWeek,
   startOfMonth,
   startOfYear,
+  startOfDay,
+  endOfDay,
   subMonths,
   subWeeks,
   subDays,
   format,
+  parse,
   getHours,
   getDay,
+  differenceInCalendarDays,
 } from "date-fns";
+import { DEFAULT_TIME_RANGE } from "@/lib/time-range";
 
 export type TimeRangePreset = "30d" | "3m" | "6m" | "1y" | "ytd" | "all";
+
+export { DEFAULT_TIME_RANGE } from "@/lib/time-range";
 
 export interface TimeRangeFilter {
   since?: Date;
@@ -27,14 +34,23 @@ export function parseTimeRange(
   const now = new Date();
 
   if (from && to) {
-    const since = new Date(from);
-    const until = new Date(to);
+    // HTML date inputs are yyyy-MM-dd; `new Date("yyyy-MM-dd")` is UTC midnight and shifts the calendar day in local timezones.
+    let since = startOfDay(parse(from, "yyyy-MM-dd", now));
+    let until = endOfDay(parse(to, "yyyy-MM-dd", now));
     if (!isNaN(since.getTime()) && !isNaN(until.getTime())) {
-      return { since, until, label: `${format(since, "MMM d, yyyy")} – ${format(until, "MMM d, yyyy")}` };
+      if (since > until) {
+        since = startOfDay(parse(to, "yyyy-MM-dd", now));
+        until = endOfDay(parse(from, "yyyy-MM-dd", now));
+      }
+      return {
+        since,
+        until,
+        label: `${format(since, "MMM d, yyyy")} – ${format(until, "MMM d, yyyy")}`,
+      };
     }
   }
 
-  switch (range) {
+  switch (range ?? DEFAULT_TIME_RANGE) {
     case "30d":
       return { since: subDays(now, 30), until: now, label: "Last 30 days" };
     case "3m":
@@ -46,8 +62,13 @@ export function parseTimeRange(
     case "ytd":
       return { since: startOfYear(now), until: now, label: "This year" };
     case "all":
-    default:
       return { label: "All time" };
+    default:
+      return {
+        since: startOfYear(now),
+        until: now,
+        label: "This year",
+      };
   }
 }
 
@@ -56,6 +77,16 @@ function buildWhere(filter: TimeRangeFilter) {
   if (filter.since) where.playedAt = { ...where.playedAt, gte: filter.since };
   if (filter.until) where.playedAt = { ...where.playedAt, lte: filter.until };
   return Object.keys(where).length ? where : {};
+}
+
+/** Date filter for queries: all-time uses `{}`; missing filter uses `fallbackSince`. */
+function resolveDateWhere(
+  filter: TimeRangeFilter | undefined,
+  fallbackSince: Date
+) {
+  if (!filter) return { playedAt: { gte: fallbackSince } };
+  if (filter.since || filter.until) return buildWhere(filter);
+  return {};
 }
 
 export async function getTotalStats(filter?: TimeRangeFilter) {
@@ -243,10 +274,7 @@ export async function getListeningHeatmap(filter?: TimeRangeFilter) {
 
 export async function getStreamsByWeek(weeksBack = 26, filter?: TimeRangeFilter) {
   const defaultSince = subWeeks(new Date(), weeksBack);
-  const where =
-    filter && (filter.since || filter.until)
-      ? buildWhere(filter)
-      : { playedAt: { gte: defaultSince } };
+  const where = resolveDateWhere(filter, defaultSince);
   const streams = await db.stream.findMany({
     where,
     select: { playedAt: true, durationMs: true },
@@ -267,10 +295,7 @@ export async function getStreamsByWeek(weeksBack = 26, filter?: TimeRangeFilter)
 
 export async function getStreamsByMonth(monthsBack = 12, filter?: TimeRangeFilter) {
   const defaultSince = subMonths(new Date(), monthsBack);
-  const where =
-    filter && (filter.since || filter.until)
-      ? buildWhere(filter)
-      : { playedAt: { gte: defaultSince } };
+  const where = resolveDateWhere(filter, defaultSince);
   const streams = await db.stream.findMany({
     where,
     select: { playedAt: true, durationMs: true },
@@ -289,6 +314,70 @@ export async function getStreamsByMonth(monthsBack = 12, filter?: TimeRangeFilte
   return Object.entries(byMonth).map(([month, data]) => ({ month, ...data }));
 }
 
+export async function getStreamsByDay(filter?: TimeRangeFilter) {
+  const defaultSince = subDays(new Date(), 90);
+  const where = resolveDateWhere(filter, defaultSince);
+  const streams = await db.stream.findMany({
+    where,
+    select: { playedAt: true, durationMs: true },
+    orderBy: { playedAt: "asc" },
+  });
+
+  const byDay: Record<string, { streams: number; minutes: number }> = {};
+  for (const s of streams) {
+    const day = format(s.playedAt, "yyyy-MM-dd");
+    if (!byDay[day]) byDay[day] = { streams: 0, minutes: 0 };
+    byDay[day].streams++;
+    byDay[day].minutes += Math.round(s.durationMs / 60000);
+  }
+
+  return Object.entries(byDay)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([label, data]) => ({ label, ...data }));
+}
+
+export async function getListeningSpan(filter?: TimeRangeFilter) {
+  const where = filter ? (filter.since || filter.until ? buildWhere(filter) : {}) : {};
+  const agg = await db.stream.aggregate({
+    where,
+    _min: { playedAt: true },
+    _max: { playedAt: true },
+  });
+  if (!agg._min.playedAt || !agg._max.playedAt) return null;
+  return { first: agg._min.playedAt, last: agg._max.playedAt };
+}
+
+/** Calendar days covered by the filter (for averages). All-time uses first→last play in data. */
+export function calendarDaysInFilter(
+  filter: TimeRangeFilter,
+  span: { first: Date; last: Date } | null
+): number {
+  if (filter.since && filter.until) {
+    return Math.max(1, differenceInCalendarDays(filter.until, filter.since) + 1);
+  }
+  if (span) {
+    return Math.max(1, differenceInCalendarDays(span.last, span.first) + 1);
+  }
+  return 1;
+}
+
+export async function getListeningDiversity(filter?: TimeRangeFilter) {
+  const where = filter ? (filter.since || filter.until ? buildWhere(filter) : {}) : {};
+  const [tracks, artists] = await Promise.all([
+    db.stream.groupBy({
+      by: ["trackId"],
+      where,
+      _count: { _all: true },
+    }),
+    db.stream.groupBy({
+      by: ["artistName"],
+      where,
+      _count: { _all: true },
+    }),
+  ]);
+  return { uniqueTracks: tracks.length, uniqueArtists: artists.length };
+}
+
 export async function getActivityHeatmap() {
   const since = subMonths(new Date(), 12);
   const streams = await db.stream.findMany({
@@ -305,7 +394,8 @@ export async function getActivityHeatmap() {
   return byDay;
 }
 
-export async function getLastSyncedAt(): Promise<Date | null> {
+/** Most recent `playedAt` in the DB (latest listen), not “when Last.fm sync last ran”. */
+export async function getLatestPlayAt(): Promise<Date | null> {
   const latest = await db.stream.findFirst({
     orderBy: { playedAt: "desc" },
     select: { playedAt: true },

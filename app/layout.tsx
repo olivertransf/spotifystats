@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import { LayoutWrapper } from "@/components/layout-wrapper";
 import { SyncOnLoad } from "@/components/sync-on-load";
@@ -14,9 +14,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const outfit = Outfit({
+  variable: "--font-display",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Spotify Stats",
-  description: "Your personal Spotify listening stats",
+  title: "Soundfolio",
+  description: "Self-hosted listening history and stats",
 };
 
 export default function RootLayout({
@@ -25,8 +30,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}>
+    <html lang="en" className="dark overflow-x-hidden">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${outfit.variable} font-sans antialiased min-h-screen min-w-0 overflow-x-hidden`}
+      >
         <SyncOnLoad />
         <LayoutWrapper>{children}</LayoutWrapper>
       </body>
