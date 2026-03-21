@@ -1,6 +1,6 @@
 import { safeJson } from "@/lib/safe-json";
 
-const USER_AGENT = "Soundfolio/1.0 (+https://github.com/yourusername/soundfolio)";
+const USER_AGENT = "Soundfolio/1.0 (+https://github.com/olivertransf/Soundfolio)";
 
 export async function getAlbumArtFromCoverArtArchive(
   artistName: string,

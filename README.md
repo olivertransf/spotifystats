@@ -52,7 +52,7 @@ Never commit `.env`.
 You need: **Node 20+**, **PostgreSQL**, **Last.fm API key + username**, and the **Spotify privacy ZIP** (not the developer API).
 
 ```bash
-git clone <your-repo-url> && cd soundfolio   # or your folder name
+git clone https://github.com/olivertransf/Soundfolio.git && cd Soundfolio
 npm install
 cp .env.example .env
 ```
@@ -84,8 +84,8 @@ cp .env.example .env
 ### 1. Clone and install
 
 ```bash
-git clone <your-fork-or-repo-url>
-cd soundfolio
+git clone https://github.com/olivertransf/Soundfolio.git
+cd Soundfolio
 npm install
 ```
 
