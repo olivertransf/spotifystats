@@ -17,6 +17,8 @@ A **template preview** with ~12 months of **synthetic listening data** lives at 
 
 The real stats UI is under **`/me`** (and may require `AUTH_KEY` when set).
 
+**Removing the demo (optional):** After setup or if you cloned the repo only to self-host, you can delete the bundled preview: remove the **`app/demo`** and **`app/api/demo`** directories and **`lib/demo-seed.ts`**, **`lib/demo-artwork.ts`**, and **`lib/demo-stats.ts`**. Then drop **`/demo`** references in **`app/page.tsx`**, **`lib/nav-links.ts`** (the `createNavLinks("/demo")` branch and related types), and **`components/app-header.tsx`**, and remove **`cdn-images.dzcdn.net`** from **`next.config.ts`** `images.remotePatterns` if you added it only for demo artwork.
+
 ## Screenshots
 
 ### Overview
