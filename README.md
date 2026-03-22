@@ -19,26 +19,15 @@ The real stats UI is under **`/me`** (and may require `AUTH_KEY` when set).
 
 ### Removing the demo (optional)
 
-After setup or if you only self-host, you can remove the preview entirely.
+After setup or if you only self-host, run:
 
-**Delete these paths:**
+```bash
+npm run remove-demo
+```
 
-| Path | What it is |
-|------|------------|
-| `app/demo/` | Demo UI routes (overview, charts, lists, `layout.tsx`, etc.) |
-| `app/api/demo/` | Demo-only API (`stats/history` for charts) |
-| `lib/demo-seed.ts` | Synthetic stream generator |
-| `lib/demo-stats.ts` | In-memory stats for the demo |
-| `lib/demo-artwork.ts` | Static album/artist image URLs for the demo |
+(`bash scripts/remove-demo.sh` does the same.) It deletes `app/demo/`, `app/api/demo/`, and `lib/demo-*.ts`, restores `/me`-only nav and header, resets the root page, removes the Deezer demo image host from `next.config.ts`, and simplifies `ListeningActivity`. Then run `npm run build` to confirm.
 
-**Then adjust the app** (or the build will fail or still mention `/demo`):
-
-- **`app/page.tsx`** — remove the “View demo” link (or the whole marketing block).
-- **`lib/nav-links.ts`** — drop `NavBase`, `createNavLinks()`, and the `/demo` branch; keep only the `/me` link arrays (or inline `href`s like before).
-- **`components/app-header.tsx`** — stop switching on `/demo`; point the logo and nav at `/me` only.
-- **`next.config.ts`** — remove `cdn-images.dzcdn.net` from `images.remotePatterns` if you do not need Deezer images elsewhere.
-
-`components/listening-activity.tsx` only adds an optional `historyApiPath` prop (used by the demo overview). You can delete that prop and its usage if nothing passes it anymore.
+You can delete `scripts/remove-demo.sh` and the `remove-demo` npm script afterward if you want a minimal tree.
 
 ## Screenshots
 
@@ -202,6 +191,7 @@ Backfill uses **no Spotify API**: album art uses iTunes, Last.fm, and Cover Art 
 | `npm run build` / `start` | Production build / run. |
 | `npm run db:push` / `db:migrate` / `db:generate` / `db:studio` | Prisma. |
 | `npm run backfill-*` | Art / artists backfill CLI. |
+| `npm run remove-demo` | Deletes bundled `/demo` code and reverts nav/config (optional). |
 
 ---
 
