@@ -6,6 +6,17 @@ Self-hosted **listening history and stats**: import an **Extended streaming hist
 
 **Disclaimer:** Not affiliated with Spotify. *Spotify* is a trademark of Spotify AB. The app reads the official **account data export** (ZIP), not the Spotify Web API.
 
+## Demo
+
+A **template preview** with ~12 months of **synthetic listening data** lives at **`/demo`** (same UI as `/me`, no import required).
+
+| Where | URL |
+|--------|-----|
+| Local dev | `http://localhost:3000/demo` (optional: `?range=ytd` or `?range=1y`) |
+| Production | `https://<your-domain>/demo` — e.g. Netlify’s default `https://<site-name>.netlify.app/demo` |
+
+The real stats UI is under **`/me`** (and may require `AUTH_KEY` when set).
+
 ## Screenshots
 
 ### Overview
