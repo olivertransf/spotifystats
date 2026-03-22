@@ -21,10 +21,18 @@ That inserts ~12 months of sample plays (with artwork URLs). Re-run `db:seed-dem
 
 | Where | URL |
 |--------|-----|
+| **Live hosted demo** | [soundfolio-stats.netlify.app/demo?range=ytd](https://soundfolio-stats.netlify.app/demo?range=ytd) |
 | Local dev | `http://localhost:3000/demo` (optional: `?range=ytd` or `?range=1y`) |
-| Production | `https://<your-domain>/demo` — e.g. Netlify’s default `https://<site-name>.netlify.app/demo` |
+| Your own deploy | `https://<your-domain>/demo` |
 
 The real stats UI is under **`/me`** (and may require `AUTH_KEY` when set).
+
+### Does `/demo` have to use the database?
+
+**Not strictly impossible** to show a preview **without** Postgres—you could ship **in-memory** fake rows and duplicate the stats math (no Prisma). This repo **doesn’t** do that anymore because: one code path with **`/me`**, reliable album/artist URLs on real `Stream` rows, and **backfill** works the same.
+
+- **No database at all:** the app is built around **`DATABASE_URL`** for imports and **`/me`**, so a DB-less deploy only makes sense if you **only** want a static marketing page—not the current Soundfolio app.
+- **Postgres without manual seeding:** point **`DATABASE_URL`** at your host, run **`npm run db:push`** once, then either run **`npm run db:seed-demo`** yourself or add it to your **deploy** (e.g. Netlify build step after `prisma generate`) so demo rows are inserted automatically—**it still uses Postgres**, but you don’t have to remember to seed by hand after every clone.
 
 ### Removing the demo (optional)
 
