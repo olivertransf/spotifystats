@@ -93,8 +93,9 @@ cp .env.example .env
 
 1. Put your Postgres URL in **`DATABASE_URL`** (and **`DIRECT_URL`** if your host requires it).
 2. **`LASTFM_API_KEY`** + **`LASTFM_USER`** — from [Last.fm API](https://www.last.fm/api/account/create), and connect your Spotify app to Last.fm so scrobbles show up.
-3. **`npm run db:push`**
-4. **`npm run dev`** → **Import** → upload the ZIP → **Sync from Last.fm**.
+3. **`npm run db:push`** (applies schema, including `isDemo` on `Stream`).
+4. **Optional:** **`npm run db:seed-demo`** — fills **`/demo`** with sample data (safe alongside a real import later).
+5. **`npm run dev`** → **Import** → upload the ZIP → **Sync from Last.fm**.
 
 **Optional:** `AUTH_KEY` locks `/me` routes.
 
@@ -138,13 +139,19 @@ npm run db:push
 npm run db:generate
 ```
 
-### 4. Run
+### 4. (Optional) Demo preview at `/demo`
+
+```bash
+npm run db:seed-demo
+```
+
+### 5. Run
 
 ```bash
 npm run dev
 ```
 
-### 5. Import and sync
+### 6. Import and sync
 
 1. Request **Extended streaming history** from [Spotify account privacy](https://www.spotify.com/account/privacy/) (delivery can take days).
 2. Upload the ZIP in **Import**.
@@ -184,7 +191,11 @@ npm run dev
 ## Netlify
 
 1. Connect the repo; build uses `netlify.toml` (`prisma generate` + `next build`).
-2. Set env: `DATABASE_URL`, `LASTFM_API_KEY`, `LASTFM_USER`, and optional `DIRECT_URL`, `AUTH_KEY`.
+2. Set env: **`DATABASE_URL`**, **`LASTFM_API_KEY`**, **`LASTFM_USER`**, and optional **`DIRECT_URL`**, **`AUTH_KEY`**, **`TIMEZONE`** (recommended so hour-of-day charts match your locale).
+3. **First deploy / schema change:** from any machine with network access to the DB, run **`npx prisma db push`** (or your migration workflow) against the **same** `DATABASE_URL` Netlify uses, so tables include **`isDemo`**.
+4. **Optional `/demo`:** run **`npm run db:seed-demo`** once with `DATABASE_URL` set (e.g. locally or CI), or the demo UI stays empty until you seed.
+
+The build does **not** run `db:push` or `db:seed-demo` automatically—apply schema and seed explicitly.
 
 ---
 
@@ -212,6 +223,7 @@ Backfill uses **no Spotify API**: album art uses iTunes, Last.fm, and Cover Art 
 - **Last.fm sync does nothing** — Set `LASTFM_API_KEY` and `LASTFM_USER` in `.env` and restart the dev server. Until then, the API responds with `skipped: true` (not an error) so background refresh requests stay quiet.
 - **DB SSL** — Use `?sslmode=require` (or host equivalent) in `DATABASE_URL`.
 - **Empty charts** — Import the ZIP and sync Last.fm so rows exist.
+- **Empty `/demo` or “run db:seed-demo”** — Run **`npm run db:push`** then **`npm run db:seed-demo`** (needs `DATABASE_URL`). Demo rows are separate from your library (`isDemo: true`).
 - **Wrong “busiest hour” / time-of-day** — Set `TIMEZONE` to your real timezone (IANA). Hosted Node often runs in UTC; hour buckets use `TIMEZONE` (or the server default).
 
 ---

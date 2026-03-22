@@ -25,7 +25,7 @@ export default async function RecentPage() {
             </p>
           ) : (
             <div className="space-y-1">
-              {streams.map((stream, i) => (
+              {streams.map((stream) => (
                 <div
                   key={stream.id}
                   className="flex items-center gap-4 px-2 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"

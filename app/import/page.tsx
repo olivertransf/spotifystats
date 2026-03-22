@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -221,7 +222,11 @@ export default function ImportPage() {
                   <Badge variant="secondary">{result.skipped.toLocaleString()} duplicates skipped</Badge>
                 </div>
                 <p className="text-muted-foreground mt-2">
-                  Head to the <a href="/" className="text-primary hover:underline">Overview</a> to see your stats.
+                  Head to the{" "}
+                  <Link href="/me?range=ytd" className="text-primary hover:underline">
+                    Overview
+                  </Link>{" "}
+                  to see your stats.
                 </p>
               </div>
             </div>

@@ -374,6 +374,18 @@ export function ListeningActivity({ periodLabel }: { periodLabel: string }) {
 }
 EOF
 
+echo "Removing db:seed-demo from package.json…"
+node -e "
+const fs = require('fs');
+const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+if (p.scripts && p.scripts['db:seed-demo']) {
+  delete p.scripts['db:seed-demo'];
+  fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\\n');
+}
+"
+
 echo ""
 echo "Done. Run: npm run build"
+echo "Optional: delete demo rows in Postgres: DELETE FROM \\\"Stream\\\" WHERE \\\"isDemo\\\" = true;"
+echo "Optional: drop column isDemo from Stream in prisma/schema.prisma and run db push if you want a minimal schema."
 echo "Then remove this script and the \"remove-demo\" npm script if you no longer need them."
