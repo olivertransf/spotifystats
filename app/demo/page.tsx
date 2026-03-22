@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import {
   Clock,
   Headphones,
-  Music,
   Disc3,
   Users,
   CalendarDays,
@@ -15,15 +14,13 @@ import { PageHeader } from "@/components/page-header";
 import {
   parseTimeRange,
   calendarDaysInFilter,
+  getTotalStats,
+  getTopTracks,
+  getTopArtists,
+  getLatestPlayAt,
+  getListeningDiversity,
+  getListeningSpan,
 } from "@/lib/stats";
-import {
-  demoGetTotalStats,
-  demoGetTopTracks,
-  demoGetTopArtists,
-  demoGetLatestPlayAt,
-  demoGetListeningDiversity,
-  demoGetListeningSpan,
-} from "@/lib/demo-stats";
 import { formatDistanceToNow } from "date-fns";
 import { AlbumArt } from "@/components/album-art";
 import { ArtistArt } from "@/components/artist-art";
@@ -40,17 +37,32 @@ export default async function DemoOverviewPage({
 
   const [stats, topTracks, topArtists, latestPlayAt, diversity, span] =
     await Promise.all([
-      Promise.resolve(demoGetTotalStats(filter)),
-      Promise.resolve(demoGetTopTracks(5, filter)),
-      Promise.resolve(demoGetTopArtists(5, filter)),
-      Promise.resolve(demoGetLatestPlayAt()),
-      Promise.resolve(demoGetListeningDiversity(filter)),
-      Promise.resolve(demoGetListeningSpan(filter)),
+      getTotalStats(filter, "demo"),
+      getTopTracks(5, filter, "demo"),
+      getTopArtists(5, filter, "demo"),
+      getLatestPlayAt("demo"),
+      getListeningDiversity(filter, "demo"),
+      getListeningSpan(filter, "demo"),
     ]);
 
   const days = calendarDaysInFilter(filter, span);
-  const avgMinPerDay = Math.round(stats.totalMinutes / days);
-  const avgStreamsPerDay = Math.round(stats.totalStreams / days);
+  const avgMinPerDay =
+    stats.totalStreams > 0 ? Math.round(stats.totalMinutes / days) : 0;
+  const avgStreamsPerDay =
+    stats.totalStreams > 0 ? Math.round(stats.totalStreams / days) : 0;
+
+  if (stats.totalStreams === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+        <p className="text-muted-foreground text-sm max-w-md">
+          No demo data in the database yet. After migrations, run{" "}
+          <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">npm run db:seed-demo</code>{" "}
+          once to insert the sample library (same charts as /me, stored in Postgres with album and
+          artist artwork).
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10">

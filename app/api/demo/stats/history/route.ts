@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  demoGetStreamsByWeek,
-  demoGetStreamsByMonth,
-  demoGetStreamsByDay,
-} from "@/lib/demo-stats";
-import { parseTimeRange } from "@/lib/stats";
+  getStreamsByWeek,
+  getStreamsByMonth,
+  getStreamsByDay,
+  parseTimeRange,
+} from "@/lib/stats";
 
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get("mode") ?? "weeks";
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const filter = parseTimeRange(range, from, to);
 
   if (mode === "weeks") {
-    const raw = demoGetStreamsByWeek(26, filter);
+    const raw = await getStreamsByWeek(26, filter, "demo");
     const data = raw.map((d) => ({
       label: d.week,
       minutes: d.minutes,
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (mode === "days") {
-    const raw = demoGetStreamsByDay(filter);
+    const raw = await getStreamsByDay(filter, "demo");
     const data = raw.map((d) => ({
       label: d.label,
       minutes: d.minutes,
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data });
   }
 
-  const raw = demoGetStreamsByMonth(12, filter);
+  const raw = await getStreamsByMonth(12, filter, "demo");
   const data = raw.map((d) => ({
     label: d.month,
     minutes: d.minutes,

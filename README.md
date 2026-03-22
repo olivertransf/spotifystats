@@ -8,7 +8,16 @@ Self-hosted **listening history and stats**: import an **Extended streaming hist
 
 ## Demo
 
-A **template preview** with ~12 months of **synthetic listening data** lives at **`/demo`** (same UI as `/me`, no import required).
+A **template preview** at **`/demo`** uses the same UI and stats code as **`/me`**, but reads **synthetic rows in Postgres** (`isDemo: true`) so album and artist images are stored like real data and render reliably.
+
+**One-time after clone / schema change:**
+
+```bash
+npm run db:push
+npm run db:seed-demo
+```
+
+That inserts ~12 months of sample plays (with artwork URLs). Re-run `db:seed-demo` anytime to replace demo data. **Backfill** buttons and `/api/backfill-*` also apply to demo rows missing art.
 
 | Where | URL |
 |--------|-----|
@@ -26,6 +35,8 @@ npm run remove-demo
 ```
 
 (`bash scripts/remove-demo.sh` does the same.) It deletes `app/demo/`, `app/api/demo/`, and `lib/demo-*.ts`, restores `/me`-only nav and header, resets the root page, removes the Deezer demo image host from `next.config.ts`, and simplifies `ListeningActivity`. Then run `npm run build` to confirm.
+
+Optionally delete demo rows in SQL: `DELETE FROM "Stream" WHERE "isDemo" = true;` (or keep them; they do not affect `/me` stats).
 
 You can delete `scripts/remove-demo.sh` and the `remove-demo` npm script afterward if you want a minimal tree.
 
@@ -53,7 +64,7 @@ Ranked by streams for the selected period.
 
 ## Database (PostgreSQL)
 
-Soundfolio stores every play (`Stream` rows) in Postgres via Prisma.
+Soundfolio stores every play (`Stream` rows) in Postgres via Prisma. Demo preview rows are the same shape, with **`isDemo: true`** (see [Demo](#demo)).
 
 | What | Why |
 |------|-----|
@@ -191,6 +202,7 @@ Backfill uses **no Spotify API**: album art uses iTunes, Last.fm, and Cover Art 
 | `npm run build` / `start` | Production build / run. |
 | `npm run db:push` / `db:migrate` / `db:generate` / `db:studio` | Prisma. |
 | `npm run backfill-*` | Art / artists backfill CLI. |
+| `npm run db:seed-demo` | Inserts synthetic demo streams into Postgres (`isDemo: true`). |
 | `npm run remove-demo` | Deletes bundled `/demo` code and reverts nav/config (optional). |
 
 ---

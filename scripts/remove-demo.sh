@@ -14,7 +14,7 @@ fi
 
 echo "Removing demo files…"
 rm -rf app/demo app/api/demo
-rm -f lib/demo-seed.ts lib/demo-stats.ts lib/demo-artwork.ts
+rm -f lib/demo-seed.ts lib/demo-artwork.ts scripts/seed-demo.ts
 
 echo "Rewriting lib/nav-links.ts…"
 cat > lib/nav-links.ts << 'EOF'

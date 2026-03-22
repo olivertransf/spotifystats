@@ -17,8 +17,11 @@ model Stream {
   albumArt   String?
   durationMs Int
   playedAt   DateTime
+  /// Synthetic `/demo` preview rows; real imports/sync set false.
+  isDemo     Boolean  @default(false)
 
   @@unique([trackId, playedAt])
   @@index([playedAt])
   @@index([artistName])
+  @@index([isDemo])
 }

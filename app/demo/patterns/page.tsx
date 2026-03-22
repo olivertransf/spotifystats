@@ -1,10 +1,10 @@
 import { Suspense } from "react";
-import { parseTimeRange } from "@/lib/stats";
 import {
-  demoGetStreamsByHour,
-  demoGetStreamsByDayOfWeek,
-  demoGetListeningHeatmap,
-} from "@/lib/demo-stats";
+  parseTimeRange,
+  getStreamsByHour,
+  getStreamsByDayOfWeek,
+  getListeningHeatmap,
+} from "@/lib/stats";
 import { TimeRangeTabs } from "@/components/time-range-tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListeningChart } from "@/components/listening-chart";
@@ -21,11 +21,11 @@ export default async function DemoPatternsPage({
   const params = await searchParams;
   const filter = parseTimeRange(params.range, params.from, params.to);
 
-  const [byHour, byDay, heatmap] = [
-    demoGetStreamsByHour(filter),
-    demoGetStreamsByDayOfWeek(filter),
-    demoGetListeningHeatmap(filter),
-  ];
+  const [byHour, byDay, heatmap] = await Promise.all([
+    getStreamsByHour(filter, "demo"),
+    getStreamsByDayOfWeek(filter, "demo"),
+    getListeningHeatmap(filter, "demo"),
+  ]);
 
   const hourChartData = byHour.map((h) => ({
     label: h.label,

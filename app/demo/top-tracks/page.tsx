@@ -1,6 +1,5 @@
 import { Suspense } from "react";
-import { parseTimeRange } from "@/lib/stats";
-import { demoGetTopTracks } from "@/lib/demo-stats";
+import { getTopTracks, parseTimeRange } from "@/lib/stats";
 import { TimeRangeTabs } from "@/components/time-range-tabs";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,7 +15,7 @@ export default async function DemoTopTracksPage({
 }) {
   const params = await searchParams;
   const filter = parseTimeRange(params.range, params.from, params.to);
-  const tracks = demoGetTopTracks(50, filter);
+  const tracks = await getTopTracks(50, filter, "demo");
 
   return (
     <div className="space-y-10">

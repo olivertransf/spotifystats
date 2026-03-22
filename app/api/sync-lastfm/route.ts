@@ -25,6 +25,7 @@ export async function POST() {
 
   try {
     const latest = await db.stream.findFirst({
+      where: { isDemo: false },
       orderBy: { playedAt: "desc" },
       select: { playedAt: true },
     });
@@ -49,6 +50,7 @@ export async function POST() {
         albumArt: t.image,
         durationMs: 180000,
         playedAt: t.playedAt,
+        isDemo: false,
       })),
       skipDuplicates: true,
     });

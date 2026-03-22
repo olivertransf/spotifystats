@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
           albumArt: null,
           durationMs: e.ms_played,
           playedAt: parseSpotifyPlayedAt(e.ts),
+          isDemo: false,
         })),
         skipDuplicates: true,
       });
