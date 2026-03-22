@@ -24,8 +24,10 @@ const granularityConfig: Record<
 
 export function ListeningActivity({
   periodLabel,
+  historyApiPath = "/api/stats/history",
 }: {
   periodLabel: string;
+  historyApiPath?: string;
 }) {
   const searchParams = useSearchParams();
   const [granularity, setGranularity] = useState<"months" | "weeks" | "days">(
@@ -46,14 +48,14 @@ export function ListeningActivity({
     if (range) params.set("range", range);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
-    fetch(`/api/stats/history?${params}`)
+    fetch(`${historyApiPath}?${params}`)
       .then((r) => r.json())
       .then((d) => {
         setData(d.data ?? []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [granularity, range, from, to]);
+  }, [granularity, range, from, to, historyApiPath]);
 
   const cfg = granularityConfig[granularity];
 

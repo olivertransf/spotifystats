@@ -11,7 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { NAV_LINKS, NAV_LINKS_MAIN, NAV_LINKS_MORE } from "@/lib/nav-links";
+import { createNavLinks } from "@/lib/nav-links";
 
 function pathMatches(pathname: string, href: string) {
   return pathname === href.split("?")[0];
@@ -35,6 +35,10 @@ export function AppHeader({
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
 
+  const navBase = pathname.startsWith("/demo") ? "/demo" : "/me";
+  const { main: NAV_LINKS_MAIN, more: NAV_LINKS_MORE, all: NAV_LINKS } =
+    createNavLinks(navBase);
+
   const moreActive = NAV_LINKS_MORE.some((l) => pathMatches(pathname, l.href));
 
   return (
@@ -42,7 +46,7 @@ export function AppHeader({
       <header className="sticky top-0 z-50 overflow-visible border-b border-border/50 bg-background pt-[env(safe-area-inset-top,0px)]">
         <div className="app-container grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 overflow-visible py-3 md:grid-cols-[auto_minmax(0,1fr)_auto]">
           <Link
-            href="/me?range=ytd"
+            href={`${navBase}?range=ytd`}
             className="min-w-0 shrink-0 font-display text-lg font-semibold tracking-tight"
             onClick={() => onMobileOpenChange(false)}
           >

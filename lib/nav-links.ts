@@ -19,20 +19,31 @@ export interface NavLinkItem {
   icon: LucideIcon;
 }
 
+export type NavBase = "/me" | "/demo";
+
+export function createNavLinks(base: NavBase) {
+  const main: NavLinkItem[] = [
+    { href: `${base}?${range}`, label: "Overview", shortLabel: "Home", icon: LayoutDashboard },
+    { href: `${base}/top-tracks?${range}`, label: "Top Tracks", shortLabel: "Tracks", icon: Music },
+    { href: `${base}/top-artists?${range}`, label: "Top Artists", shortLabel: "Artists", icon: Mic2 },
+    { href: `${base}/top-albums?${range}`, label: "Top Albums", shortLabel: "Albums", icon: Disc },
+    { href: `${base}/patterns?${range}`, label: "Patterns", shortLabel: "Patterns", icon: Activity },
+    { href: `${base}/history?${range}`, label: "History", shortLabel: "History", icon: History },
+  ];
+  const more: NavLinkItem[] =
+    base === "/demo"
+      ? [{ href: `${base}/recent`, label: "Recent", shortLabel: "Recent", icon: Clock }]
+      : [
+          { href: `${base}/recent`, label: "Recent", shortLabel: "Recent", icon: Clock },
+          { href: `${base}/import`, label: "Import", shortLabel: "Import", icon: Upload },
+        ];
+  return { main, more, all: [...main, ...more] };
+}
+
 /** Primary destinations — always in the top bar (desktop). */
-export const NAV_LINKS_MAIN: NavLinkItem[] = [
-  { href: `/me?${range}`, label: "Overview", shortLabel: "Home", icon: LayoutDashboard },
-  { href: `/me/top-tracks?${range}`, label: "Top Tracks", shortLabel: "Tracks", icon: Music },
-  { href: `/me/top-artists?${range}`, label: "Top Artists", shortLabel: "Artists", icon: Mic2 },
-  { href: `/me/top-albums?${range}`, label: "Top Albums", shortLabel: "Albums", icon: Disc },
-  { href: `/me/patterns?${range}`, label: "Patterns", shortLabel: "Patterns", icon: Activity },
-  { href: `/me/history?${range}`, label: "History", shortLabel: "History", icon: History },
-];
+export const NAV_LINKS_MAIN: NavLinkItem[] = createNavLinks("/me").main;
 
 /** Secondary — under “More” on desktop to keep the bar scannable; still listed in the mobile drawer. */
-export const NAV_LINKS_MORE: NavLinkItem[] = [
-  { href: "/me/recent", label: "Recent", shortLabel: "Recent", icon: Clock },
-  { href: "/me/import", label: "Import", shortLabel: "Import", icon: Upload },
-];
+export const NAV_LINKS_MORE: NavLinkItem[] = createNavLinks("/me").more;
 
-export const NAV_LINKS: NavLinkItem[] = [...NAV_LINKS_MAIN, ...NAV_LINKS_MORE];
+export const NAV_LINKS: NavLinkItem[] = createNavLinks("/me").all;
